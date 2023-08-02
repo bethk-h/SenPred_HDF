@@ -1,5 +1,5 @@
 ---
-title: "11_3Dpred_Tabib"
+title: "10_3Dpred_Tabib"
 author: "BH"
 date: "2023-03-09"
 output: html_document
@@ -41,11 +41,16 @@ as.matrix(percentages)
 percentages <- percentages[ order(row.names(percentages)), ]
 v <- rownames(percentages)
 
+barplot_data <- percentages$DS3D
+barplot_names <- v
 
-barplot(percentages$DS3D, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted deeply senescent cells",
-xlab="Population Doublings",
-ylab="Percentage", ylim=c(0,100))
+png(filename = "../Output/Tabib/scPred3D_barplot_DS3Dbyage.png", width = 800, height = 600)  # Set appropriate width and height
+barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue", main = "Percentage of predicted deeply senescent cells", xlab="Age",
+         ylab = "Percentage", ylim = c(0, 100))
+dev.off() 
 ```
+
+
 ```{r}
 query2 <- query@meta.data
 table <- table(query2[, c("seurat_clusters", "scpred_prediction")])
@@ -61,10 +66,13 @@ as.matrix(percentages)
 percentages <- percentages[ order(row.names(percentages)), ]
 v <- rownames(percentages)
 
+barplot_data <- percentages$DS3D
+barplot_names <- v
 
-barplot(percentages$DS3D, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted deeply senescent cells",
-xlab="Cluster",
-ylab="Percentage", ylim=c(0,100))
+png(filename = "../Output/Tabib/scPred3D_barplot_DS3Dbycluster.png", width = 800, height = 600)  # Set appropriate width and height
+barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue", main = "Percentage of predicted deeply senescent cells", xlab="Cluster",
+         ylab = "Percentage", ylim = c(0, 100))
+dev.off() 
 ```
 ## Investigating DEGs of cells my model predicts are DS3D vs cells my model predicts are EP3D
 
