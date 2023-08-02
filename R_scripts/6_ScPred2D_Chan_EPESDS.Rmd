@@ -357,7 +357,7 @@ draw_confusion_matrix <- function(cm, output_file) {
 
 
 your_confusion_matrix <- cm
-output_file_path <- "../Output/Early_senescence/CM2D_SVM_testing.png"
+output_file_path <- "../Output/Early_senescence/CM2D_MDA_testing.png"
 draw_confusion_matrix(your_confusion_matrix, output_file_path)
 
 ```
