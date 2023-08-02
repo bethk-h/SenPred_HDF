@@ -15,7 +15,7 @@ library(here)
 
 # Clean the Results directory before 99_Run_All.Rmd
 ```{r Clean, echo=TRUE}
-dirs_to_clean <- c("Results")
+dirs_to_clean <- c("Output")
 
 
 if(!dir.exists(here(dirs_to_clean))){
