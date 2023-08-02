@@ -72,12 +72,12 @@ ggsave(
   )
 
 ##Save training and testing datasets
-#saveRDS(training, file = "../Output/Seurat_Objects/hdfseuratfiltered_2Dtraining.rds")
-#saveRDS(testing, file =  "../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting.rds" )
+saveRDS(training, file = "../Output/Seurat_Objects/hdfseuratfiltered_2Dtraining.rds")
+saveRDS(testing, file =  "../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting.rds" )
 
 
-training <- readRDS("../Output/Seurat_Objects/hdfseuratfiltered_2Dtraining.rds")
-testing <- readRDS("../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting.rds")
+#training <- readRDS("../Output/Seurat_Objects/hdfseuratfiltered_2Dtraining.rds")
+#testing <- readRDS("../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting.rds")
 
 ```
 
@@ -347,8 +347,6 @@ output_file_path <- "../Output/HDF_ScPred/CM2D_MDA_testing.png"
 draw_confusion_matrix(your_confusion_matrix, output_file_path)
 
 ```
-
-
 
 ### Session information
 ```{r session_info_99}

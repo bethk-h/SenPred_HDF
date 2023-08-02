@@ -446,10 +446,14 @@ as.matrix(percentages)
 percentages <- percentages[ order(row.names(percentages)), ]
 v <- rownames(percentages)
 
+barplot_data <- percentages$DS2D
+barplot_names <- v
 
-barplot(percentages$DS2D, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted senescent cells",
-xlab="Cluster Identity",
-ylab="Percentage", ylim=c(0,100))
+png(filename = "../Output/Chan/scPred2D_Chan_barplot_DSpercluster.png", width = 800, height = 600)  # Set appropriate width and height
+barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue", main = "Percentage of predicted senescent cells",
+        xlab = "Cluster Identity", ylab = "Percentage", ylim = c(0, 100))
+dev.off() 
+
 
 ```
 
@@ -479,13 +483,7 @@ cds@int_colData@listData$reducedDims$UMAP <- query@reductions$umap@cell.embeddin
 
 
 cds <- learn_graph(cds)
-plot_cells(cds,
-           color_cells_by = "PDL",
-           label_groups_by_cluster=FALSE,
-           label_leaves=FALSE,
-           label_branch_points=FALSE)
 
-## 
 
 get_earliest_principal_node <- function(cds, scpred_prediction="EP2D"){
   cell_ids <- which(colData(cds)[, "scpred_prediction"] == scpred_prediction)
