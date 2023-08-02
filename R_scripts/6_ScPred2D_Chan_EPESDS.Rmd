@@ -1,0 +1,411 @@
+---
+title: "Model_DS_ES_EP"
+author: "BH"
+date: '2022-11-15'
+output: html_document
+---
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
+
+
+```{r}
+#Batch corrections
+ES <- subset(Chan_seurat2, PDL == "PDL_50")
+
+#Adding PDL to a 'Sample' column to help with merge 
+ESMeta = ES@meta.data
+ESMeta["Sample"] <- "PDL50"
+head(ESMeta)
+ESMetaTrim <- subset(ESMeta, select = c("Sample"))
+ES <- AddMetaData(ES, ESMetaTrim)
+
+#Renaming barcode to 'Barcode' to match
+ES$Barcode <- ES$barcode
+ES$barcode <- NULL
+
+ES <- NormalizeData(ES, verbose = FALSE)
+ES <- FindVariableFeatures(ES, selection.method = "vst", nfeatures = 2000)
+
+hdfseurat_filt_2D <- NormalizeData(hdfseurat_filt_2D, verbose = FALSE)
+hdfseurat_filt_2D <- FindVariableFeatures(hdfseurat_filt_2D, selection.method = "vst", nfeatures = 2000)
+
+Anchors <- FindIntegrationAnchors(object.list = list(ES, hdfseurat_filt_2D), dims = 1:20)
+Combined <- IntegrateData(anchorset = Anchors, dims = 1:20)
+```
+
+## Plotting top 10 variable features in the 2D cells
+```{r}
+#Selecting highly variable features - high cell to cell variation
+Combined<- FindVariableFeatures(Combined, selection.method ="vst", nfeatures=2000)
+#Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(Combined), 10)
+top10
+plot3 <- VariableFeaturePlot(Combined)
+#Plot variable features with labels
+plot4 <- LabelPoints(plot=plot3, points = top10, repel=TRUE)
+plot3
+plot4
+
+ggsave(
+  "HDF_Chan_variablefeatures.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Early_senescence"
+  )
+
+```
+##PCA 
+```{r}
+all.genes <- rownames(Combined)
+HDF_Chan_combined <- ScaleData(Combined, features = all.genes)
+
+#Performing a PCA
+HDF_Chan_combined <- RunPCA(HDF_Chan_combined, features=VariableFeatures(object = HDF_Chan_combined))
+DimPlot(HDF_Chan_combined, reduction = "pca")
+ggsave(
+  "HDF_Chan_PCA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Early_senescence"
+  )
+```
+
+## PCA coloured by sample type
+```{r}
+
+DimPlot(HDF_Chan_combined, reduction = "pca", group.by = "Sample") 
+
+ggsave(
+  "HDF_Chan_PCA_samples.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Early_senescence"
+  )
+```
+
+```{r}
+DimHeatmap(HDF_Chan_combined, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(HDF_Chan_combined, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(HDF_Chan_combined)
+
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+HDF_Chan_combined <- FindNeighbors(HDF_Chan_combined, dims =1:10)
+
+#group cells using findclusters function
+HDF_Chan_combined <- FindClusters(HDF_Chan_combined, resolution = 0.7)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(HDF_Chan_combined), 5)
+```
+
+```{r}
+#Running a UMAP
+HDF_Chan_combined <- RunUMAP(HDF_Chan_combined, dims=1:10)
+
+DimPlot(HDF_Chan_combined, reduction = "umap", seed=123, cols =c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12", "#652A0E", "tan3", "peachpuff"))
+
+ggsave(
+  "HDF_Chan_UMAP.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Early_senescence"
+  )
+
+
+DimPlot(HDF_Chan_combined, reduction = "umap",group.by = "Sample", seed=123, cols = c( "#24B3A8", "#FF92A5", "#74B72E"))
+
+ggsave(
+  "HDF_Chan_UMAP_sample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Early_senescence"
+  )
+
+```
+
+Building an MDA model 
+```{r}
+HDF_Chan_combined$new_col <- NULL
+#HDF_Chan_combined$New_Col <- NULL
+#HDF_Chan_combined$New_Col.1 <- NULL
+New_Col <- 1:3235
+HDF_Chan_combined@meta.data <- cbind(HDF_Chan_combined@meta.data, New_Col)
+
+HDF_Chan_combined@meta.data$New_Col <- 1:nrow(HDF_Chan_combined@meta.data)
+names(HDF_Chan_combined@meta.data)
+train <- HDF_Chan_combined@meta.data %>% dplyr::sample_frac(.8)
+test  <- dplyr::anti_join(HDF_Chan_combined@meta.data, train, by = 'New_Col')
+
+
+test <- test$New_Col
+train <- train$New_Col
+
+HDF_Chan_combined@meta.data$New_Col[HDF_Chan_combined@meta.data$New_Col %in% test] <- "Test"
+HDF_Chan_combined@meta.data$New_Col[HDF_Chan_combined@meta.data$New_Col %in% train] <- "Train"
+
+obj_list <- SplitObject(HDF_Chan_combined, split.by = "New_Col")
+
+
+#Normalising, scaling and running PCA on training and testing data
+training <- obj_list$Train %>% 
+  RunUMAP(dims = 1:10)
+
+DimPlot(training, group.by = "Sample", label = FALSE, repel = TRUE, seed=123)
+
+testing <- obj_list$Test%>%
+  RunUMAP(dims = 1:10)
+
+DimPlot(testing, group.by = "Sample", label = FALSE, repel=TRUE, seed=123)
+
+```
+
+
+```{r}
+#Using the reference data set to create and evaluate different models - no PC filters
+HDF_Chan_combined_scPred <- getFeatureSpace(training, "Sample")
+
+
+#This model is the mda model
+HDF_Chan_combined_scPred <- trainModel(HDF_Chan_combined_scPred, model = "mda")
+get_probabilities(HDF_Chan_combined_scPred) %>% head()
+get_scpred(HDF_Chan_combined_scPred)
+HDF_Chan_combined_scPred
+```
+
+
+```{r}
+#MDA testing 
+query <- scPredict(testing, HDF_Chan_combined_scPred, recompute_alignment = FALSE)
+
+#Plotting UMAP of predicted senescent cells
+query <- RunUMAP(query, reduction = "scpred", dims = 1:10)
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed = 123, cols = c("darkblue", "deeppink3", "#00CA00", "antiquewhite4"))
+
+ggsave(
+  "UMAP_scpred_MDA_ES.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Early_senescence"
+  )
+DimPlot(query, group.by = "Sample", label = FALSE, repel = TRUE, seed = 123)
+ggsave(
+  "UMAP_scpred_MDA_ES_SAMPLE.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_Data_ScPred/2D_SVM"
+  )
+```
+#Confusion matrix plot
+```{r}
+query_df <- query@meta.data
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="DS2D" & query_df$scpred_prediction=="DS2D" ~ "DS2DT"))
+
+ds2dt <- nrow(query_df[!is.na(query_df$Status),])
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="DS2D" & query_df$scpred_prediction=="EP2D" ~ "EP2DF"))
+
+ep2df <- nrow(query_df[!is.na(query_df$Status),])
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="DS2D" & query_df$scpred_prediction=="PDL50" ~ "PDL50F"))
+
+pdl50f <- nrow(query_df[!is.na(query_df$Status),])
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="EP2D" & query_df$scpred_prediction=="EP2D" ~ "EP2DT"))
+
+ep2dt <- nrow(query_df[!is.na(query_df$Status),])
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="EP2D" & query_df$scpred_prediction=="PDL50" ~ "PDL50EPF"))
+
+PDL50EPF <- nrow(query_df[!is.na(query_df$Status),])
+
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="PDL50" & query_df$scpred_prediction=="PDL50" ~ "PDL50T"))
+
+PDL50T <- nrow(query_df[!is.na(query_df$Status),])
+
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="EP2D" & query_df$scpred_prediction=="DS2D" ~ "DS2DF"))
+
+ds2df <- nrow(query_df[!is.na(query_df$Status),])
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="PDL50" & query_df$scpred_prediction=="DS2D" ~ "DS2DESF"))
+
+ds2desf <- nrow(query_df[!is.na(query_df$Status),])
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="PDL50" & query_df$scpred_prediction=="EP2D" ~ "EP2DESF"))
+
+ep2desf <- nrow(query_df[!is.na(query_df$Status),])
+
+unassigned <- length(which(query_df$scpred_prediction == "unassigned"))
+
+#Plotting into confusion matrix
+table <- matrix(c(ds2dt, ep2df, pdl50f, ds2df, ep2dt, PDL50EPF, ds2desf, ep2desf, PDL50T),ncol=3,byrow=TRUE)
+colnames(table) <- c("DS", "EP", "PDL50")
+rownames(table) <- c("DS", "EP", "PDL50")
+table <- as.table(table)
+table
+
+
+perc <- prop.table(table, 1)*100
+perc
+
+perc <- round(perc, digits=2)
+
+cm <- confusionMatrix(perc)
+
+# Drawing confusion matrix into visual table
+
+draw_confusion_matrix <- function(cm) {
+
+  layout(matrix(c(1,1)))
+  par(mar=c(2,2,2,2))
+  plot(c(100, 345), c(200, 470), type = "n", xlab="", ylab="", xaxt='n', yaxt='n')
+  title('MDA Confusion Matrix (%)', cex.main=1.5)
+
+  # create the matrix 
+  rect(150, 420, 200, 360, col='#32CD32')
+  text(175, 440, 'DS', cex=1.2)
+  rect(205, 420, 255, 360, col='#FF4500')
+  text(230, 440, 'EP', cex=1.2)
+  rect(260, 420, 310, 360, col='#FF4500')
+  text(285, 440, 'ES', cex=1.2)
+  
+  text(125, 325, 'Predicted', cex=1.3, srt=90, font=2)
+  text(230, 465, 'Actual', cex=1.3, font=2)
+  rect(150, 290, 200, 350, col='#FF4500')
+  rect(205, 290, 255, 350, col='#32CD32')
+  text(140, 390, 'DS', cex=1.2, srt=90)
+  text(140, 320, 'EP', cex=1.2, srt=90)
+  rect(260, 290, 310, 350, col='#FF4500')
+  rect(150, 220, 200, 280, col='#FF4500')
+  rect(205, 220, 255, 280, col='#FF4500')
+  rect(260, 220, 310, 280, col='#32CD32')
+  text(140, 250, 'ES', cex=1.2, srt=90)
+  
+  
+  
+
+  # add in the cm results 
+  res <- as.numeric(cm$table)
+  text(176, 393, res[1], cex=1.2, font=2, col='white')
+  text(176, 323, res[2], cex=1.2, font=2, col='white')
+  text(176, 253, res[3], cex=1.2, font=2, col='white')
+  text(230, 393, res[4], cex=1.2, font=2, col='white')
+  text(230, 323, res[5], cex=1.2, font=2, col='white')
+  text(230, 253, res[6], cex=1.2, font=2, col='white')
+  text(284, 393, res[7], cex=1.2, font=2, col='white')
+  text(284, 323, res[8], cex=1.2, font=2, col='white')
+  text(284, 253, res[9], cex=1.2, font=2, col='white')
+  text(120, 200, 'Unassigned =', cex=0.9, font=1, col='black')
+  text(155, 201, unassigned, cex=0.9, font=1, col='black')
+
+}  
+
+
+draw_confusion_matrix(cm)
+
+```
+# Running ES model on whole Chan dataset
+
+```{r}
+query <- NormalizeData(Chan_seurat2)
+query <- scPredict(query, HDF_Chan_combined_scPred)
+
+#Plotting UMAP of predicted senescent cells
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed = 123, cols = c("darkblue", "deeppink3", "#228c22", "antiquewhite4"))
+ggsave(
+  "UMAP_Chan_scpred_ESmodel.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Early_senescence"
+  )
+```
+
+## Investigating the percentages of predicted early senescent cells from each group
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("PDL", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+v <- rownames(percentages)
+
+
+barplot(percentages$PDL50, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted early senescent cells",
+xlab="Population Doublings",
+ylab="Percentage", ylim=c(0,100))
+
+```
+
+## Investigating new ES model on EP DS cells 
+```{r}
+query <- NormalizeData(hdfseurat_filt_2D)
+query <- scPredict(query, HDF_Chan_combined_scPred)
+
+#Plotting UMAP of predicted senescent cells
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed = 123, cols = c("darkblue", "deeppink3", "#00CA00", "antiquewhite4"))
+```
+
+## Investigating the percentages of predicted early senescent cells from each group
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("Sample", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+v <- rownames(percentages)
+
+
+barplot(percentages$PDL50, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted early senescent cells",,
+ylab="Percentage", ylim=c(0,100))
+
+```
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.

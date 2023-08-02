@@ -1,0 +1,119 @@
+---
+title: "12_3Dpred_SoleBoldo"
+author: "BH"
+date: "2023-03-09"
+output: html_document
+---
+
+##Testing ScPred 3D ML models on Tabib datasets
+```{r}
+#MDA radial model
+query <- NormalizeData(Sole_fibs2)
+query <- scPredict(query, hdf_mda3D)
+
+DimPlot(query, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123)
+
+
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4"))
+
+ggsave(
+  "UMAP_scpred_EPDS_3D.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+```
+
+## Investigating the percentage of DS predicted cells per age
+
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("age", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+v <- rownames(percentages)
+
+
+barplot(percentages$DS3D, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted deeply senescent cells",
+xlab="Population Doublings",
+ylab="Percentage", ylim=c(0,100))
+```
+
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("seurat_clusters", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+v <- rownames(percentages)
+
+
+barplot(percentages$DS3D, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted deeply senescent cells",
+xlab="Clusters",
+ylab="Percentage", ylim=c(0,100))
+```
+
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("SoleBoldo_name", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+v <- rownames(percentages)
+
+
+barplot(percentages$DS3D, names=v, cex.names=0.3, col="darkblue", main="Percentage of predicted deeply senescent cells",
+xlab="Cell Identity",
+ylab="Percentage", ylim=c(0,100))
+```
+
+
+## Investigating DEGs of cells my model predicts are DS3D vs cells my model predicts are EP3D
+
+```{r}
+query3 <- SetIdent(query, value = query@meta.data$scpred_prediction)
+levels(query3)
+
+
+DS3D.markers.pos <- FindMarkers(query3, ident.1 = "DS3D", ident.2 = "EP3D", only.pos = TRUE, min.pct=0.25)
+
+DS3D.markers.all <- FindMarkers(query3, ident.1 = "DS3D", ident.2 = "EP3D", only.pos = FALSE, min.pct=0.25)
+
+write.csv(DS3D.markers.pos,"../Output/SoleBoldo/DS3D_markers_Pos2.csv")
+write.csv(DS3D.markers.all,"../Output/SoleBoldo/DS3D_markers_all.csv")
+
+
+DS.markerscluster <- FindMarkers(query, only.pos=FALSE, ident.1 = c(0,7), ident.2 = c (1,2,3,4,5,6,8,9,10), min.pct=0.25)
+write.csv(DS.markerscluster,"../Output/HDF_Data_Analysis/Cluster_markers/SoleDSpredClusters.csv")
+
+VlnPlot(query, features = c("CDKN1A", "CDKN2A"))
+```
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.

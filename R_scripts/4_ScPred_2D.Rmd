@@ -1,0 +1,358 @@
+---
+title: "scPred"
+author: "BH"
+date: '2022-03-23'
+output: html_document
+---
+## Building machine learning models of proliferative and senescent HDFs in 2D, using ScPred package (see https://github.com/powellgenomicslab/scPred)
+
+## Loading libraries
+```{r}
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("MLmetrics")
+```
+
+## Seperating dataset into training and testing. 80% training, and 20% testing
+```{r}
+new_col <- 1:2193
+
+hdfseurat_filt_2D@meta.data <- cbind(hdfseurat_filt_2D@meta.data, new_col)
+
+hdfseurat_filt_2D@meta.data$new_col <- 1:nrow(hdfseurat_filt_2D@meta.data)
+train <- hdfseurat_filt_2D@meta.data %>% dplyr::sample_frac(.8)
+test  <- dplyr::anti_join(hdfseurat_filt_2D@meta.data, train, by = 'new_col')
+
+test <- test$new_col
+train <- train$new_col
+
+hdfseurat_filt_2D@meta.data$new_col[hdfseurat_filt_2D@meta.data$new_col %in% test] <- "Test"
+hdfseurat_filt_2D@meta.data$new_col[hdfseurat_filt_2D@meta.data$new_col %in% train] <- "Train"
+
+obj_list <- SplitObject(hdfseurat_filt_2D, split.by = "new_col")
+```
+
+## Normalising, scaling and running PCA on training and testing data
+```{r}
+training <- obj_list$Train %>% 
+  NormalizeData() %>% 
+  FindVariableFeatures() %>% 
+  ScaleData() %>% 
+  RunPCA() %>% 
+  RunUMAP(dims = 1:10)
+
+DimPlot(training, group.by = "Sample", label = FALSE, repel = TRUE, seed =123)
+
+ggsave(
+  "UMAP_2D_training.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_ScPred"
+  )
+
+testing <- obj_list$Test%>%
+  NormalizeData() %>%
+  FindVariableFeatures() %>% 
+  ScaleData() %>% 
+  RunPCA() %>% 
+  RunUMAP(dims = 1:10)
+
+DimPlot(testing, group.by = "Sample", label = FALSE, repel=TRUE, seed = 123)
+
+ggsave(
+  "UMAP_2D_testing.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_ScPred"
+  )
+
+##Save training and testing datasets
+#saveRDS(training, file = "../Output/Seurat_Objects/hdfseuratfiltered_2Dtraining.rds")
+#saveRDS(testing, file =  "../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting.rds" )
+
+
+training <- readRDS("../Output/Seurat_Objects/hdfseuratfiltered_2Dtraining.rds")
+testing <- readRDS("../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting.rds")
+
+```
+
+```{r}
+#Using the training dataset to create and evaluate different models - no PC filters
+
+hdfseurat_scPred <- getFeatureSpace(training, "Sample")
+
+
+#This model is the svm Radial model
+hdfseurat_svmradial2D <- trainModel(hdfseurat_scPred)
+get_probabilities(hdfseurat_svmradial2D) %>% head()
+get_scpred(hdfseurat_svmradial2D)
+hdfseurat_svmradial2D
+get_classifiers(hdfseurat_svmradial2D)
+
+
+#This model is the mda model
+hdf_mda2D <- trainModel(hdfseurat_scPred, model = "mda")
+get_probabilities(hdf_mda2D) %>% head()
+get_scpred(hdf_mda2D)
+hdf_mda2D
+
+#This model is logistic regression
+hdf_glm2D <- trainModel(hdfseurat_scPred, model = "glm")
+get_probabilities(hdf_glm2D)%>% head()
+get_scpred(hdf_glm2D)
+hdf_glm2D
+
+#This model is knn
+hdf_knn2D <- trainModel(hdfseurat_scPred, model = "knn")
+get_probabilities(hdf_knn2D)%>% head()
+get_scpred(hdf_knn2D)
+hdf_knn2D
+```
+
+## Decided to take SVM and MDA forward for further analysis due to increased sens and spec. 
+Testing on test dataset
+
+```{r}
+
+#SVM testing 
+query <- NormalizeData(testing)
+query <- scPredict(query, hdfseurat_svmradial2D, recompute_alignment = FALSE)
+
+#Plotting UMAP of predicted senescent cells
+query <- RunUMAP(query, reduction = "scpred", dims = 1:10)
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed = 123, cols = c("#1e2f97", "#AA336A", "antiquewhite4"))
+ggsave(
+  "UMAP_scpred_testing2D_SVM.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_Data_ScPred/2D_SVM"
+  )
+DimPlot(query, group.by = "Sample", label = FALSE, repel = TRUE, seed = 123, cols = c( "#24B3A8", "#FF92A5"))
+ggsave(
+  "UMAP_scpred_testing2D_SAMPLE.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_Data_ScPred/2D_SVM"
+  )
+FeaturePlot(query, c("scpred_DS2D", "scpred_EP2D"))
+```
+#Confusion matrix plot
+```{r}
+query_df <- query@meta.data
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="DS2D" & query_df$scpred_prediction=="DS2D" ~ "DS2DT"))
+
+ds2dt <- nrow(query_df[!is.na(query_df$Status),])
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="DS2D" & query_df$scpred_prediction=="EP2D" ~ "EP2DF"))
+
+ep2df <- nrow(query_df[!is.na(query_df$Status),])
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="EP2D" & query_df$scpred_prediction=="EP2D" ~ "EP2DT"))
+
+ep2dt <- nrow(query_df[!is.na(query_df$Status),])
+
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="EP2D" & query_df$scpred_prediction=="DS2D" ~ "DS2DF"))
+
+ds2df <- nrow(query_df[!is.na(query_df$Status),])
+
+unassigned <- length(which(query_df$scpred_prediction == "unassigned"))
+
+#Plotting into confusion matrix
+
+table <- matrix(c(ds2dt, ep2df, ds2df, ep2dt),ncol=2,byrow=TRUE)
+colnames(table) <- c("DS", "EP")
+rownames(table) <- c("DS", "EP")
+table <- as.table(table)
+table
+
+perc <- prop.table(table, 1)*100
+perc
+
+perc <- round(perc, digits=2)
+
+cm <- confusionMatrix(perc)
+
+
+# Required library for saving plots
+library(png)
+
+# Drawing confusion matrix into visual table and save as a PNG file
+draw_confusion_matrix <- function(cm, output_file) {
+  # Create a function to draw the matrix plot
+  draw_matrix_plot <- function() {
+    layout(matrix(c(1, 1, 2)))
+    par(mar = c(2, 2, 2, 2))
+    plot(c(100, 345), c(300, 450), type = "n", xlab = "", ylab = "", xaxt = 'n', yaxt = 'n')
+    title('SVM Confusion Matrix (%)', cex.main = 2)
+
+    # create the matrix
+    rect(150, 430, 240, 370, col = '#32CD32')
+    text(195, 440, 'DS', cex = 1.2)
+    rect(250, 430, 340, 370, col = '#FF4500')
+    text(295, 440, 'EP', cex = 1.2)
+    text(125, 370, 'Predicted', cex = 1.3, srt = 90, font = 2)
+    text(245, 450, 'Actual', cex = 1.3, font = 2)
+    rect(150, 305, 240, 365, col = '#FF4500')
+    rect(250, 305, 340, 365, col = '#32CD32')
+    text(140, 400, 'DS', cex = 1.2, srt = 90)
+    text(140, 335, 'EP', cex = 1.2, srt = 90)
+
+    # add in the cm results
+    res <- as.numeric(cm$table)
+    text(195, 400, res[1], cex = 1.6, font = 2, col = 'white')
+    text(195, 335, res[2], cex = 1.6, font = 2, col = 'white')
+    text(295, 400, res[3], cex = 1.6, font = 2, col = 'white')
+    text(295, 335, res[4], cex = 1.6, font = 2, col = 'white')
+    text(110, 300, 'Unassigned =', cex = 0.9, font = 1, col = 'black')
+    text(130, 300, unassigned, cex = 0.9, font = 1, col = 'black')
+  }
+
+  # Call the function to draw the matrix plot
+  draw_matrix_plot()
+
+  # Save the plot as a PNG file
+  png(filename = output_file, width = 800, height = 600)  # Set appropriate width and height
+  draw_matrix_plot()
+  dev.off()  # Turn off the PNG device
+}
+
+
+your_confusion_matrix <- cm
+output_file_path <- "../Output/HDF_ScPred/CM2D_SVM_testing.png"
+draw_confusion_matrix(your_confusion_matrix, output_file_path)
+
+
+```
+#Testing MDA model
+```{r}
+#SVM testing 
+query <- NormalizeData(testing)
+query <- scPredict(query, hdf_mda2D, recompute_alignment = FALSE)
+
+#Plotting UMAP of predicted senescent cells
+query <- RunUMAP(query, reduction = "scpred", dims = 1:10)
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed = 123, cols = c("darkblue", "deeppink3"))
+ggsave(
+  "UMAP_scpred_testing2D.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_Data_ScPred/2D_MDA"
+  )
+DimPlot(query, group.by = "Sample", label = FALSE, repel = TRUE, seed = 123, cols = c( "#24B3A8", "#FF92A5"))
+ggsave(
+  "UMAP_scpred_testing2D_SAMPLE.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_Data_ScPred/2D_MDA"
+  )
+FeaturePlot(query, c("scpred_DS2D", "scpred_EP2D"))
+```
+#Confusion matrix plot
+```{r}
+query_df <- query@meta.data
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="DS2D" & query_df$scpred_prediction=="DS2D" ~ "DS2DT"))
+
+ds2dt <- nrow(query_df[!is.na(query_df$Status),])
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="DS2D" & query_df$scpred_prediction=="EP2D" ~ "EP2DF"))
+
+ep2df <- nrow(query_df[!is.na(query_df$Status),])
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="EP2D" & query_df$scpred_prediction=="EP2D" ~ "EP2DT"))
+
+ep2dt <- nrow(query_df[!is.na(query_df$Status),])
+
+
+query_df <- query_df %>%
+  mutate(Status = case_when(query_df$Sample=="EP2D" & query_df$scpred_prediction=="DS2D" ~ "DS2DF"))
+
+ds2df <- nrow(query_df[!is.na(query_df$Status),])
+
+unassigned <- length(which(query_df$scpred_prediction == "unassigned"))
+
+#Plotting into confusion matrix
+
+table <- matrix(c(ds2dt, ep2df, ds2df, ep2dt),ncol=2,byrow=TRUE)
+colnames(table) <- c("DS", "EP")
+rownames(table) <- c("DS", "EP")
+table <- as.table(table)
+table
+
+perc <- prop.table(table, 1)*100
+perc
+
+perc <- round(perc, digits=2)
+
+cm <- confusionMatrix(perc)
+
+# Required library for saving plots
+library(png)
+
+# Drawing confusion matrix into visual table and save as a PNG file
+draw_confusion_matrix <- function(cm, output_file) {
+  # Create a function to draw the matrix plot
+  draw_matrix_plot <- function() {
+    layout(matrix(c(1, 1, 2)))
+    par(mar = c(2, 2, 2, 2))
+    plot(c(100, 345), c(300, 450), type = "n", xlab = "", ylab = "", xaxt = 'n', yaxt = 'n')
+    title('MDA Confusion Matrix (%)', cex.main = 2)
+
+    # create the matrix
+    rect(150, 430, 240, 370, col = '#32CD32')
+    text(195, 440, 'DS', cex = 1.2)
+    rect(250, 430, 340, 370, col = '#FF4500')
+    text(295, 440, 'EP', cex = 1.2)
+    text(125, 370, 'Predicted', cex = 1.3, srt = 90, font = 2)
+    text(245, 450, 'Actual', cex = 1.3, font = 2)
+    rect(150, 305, 240, 365, col = '#FF4500')
+    rect(250, 305, 340, 365, col = '#32CD32')
+    text(140, 400, 'DS', cex = 1.2, srt = 90)
+    text(140, 335, 'EP', cex = 1.2, srt = 90)
+
+    # add in the cm results
+    res <- as.numeric(cm$table)
+    text(195, 400, res[1], cex = 1.6, font = 2, col = 'white')
+    text(195, 335, res[2], cex = 1.6, font = 2, col = 'white')
+    text(295, 400, res[3], cex = 1.6, font = 2, col = 'white')
+    text(295, 335, res[4], cex = 1.6, font = 2, col = 'white')
+    text(110, 300, 'Unassigned =', cex = 0.9, font = 1, col = 'black')
+    text(130, 300, unassigned, cex = 0.9, font = 1, col = 'black')
+  }
+
+  # Call the function to draw the matrix plot
+  draw_matrix_plot()
+
+  # Save the plot as a PNG file
+  png(filename = output_file, width = 800, height = 600)  # Set appropriate width and height
+  draw_matrix_plot()
+  dev.off()  # Turn off the PNG device
+}
+
+
+your_confusion_matrix <- cm
+output_file_path <- "../Output/HDF_ScPred/CM2D_MDA_testing.png"
+draw_confusion_matrix(your_confusion_matrix, output_file_path)
+
+```
+
+
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.

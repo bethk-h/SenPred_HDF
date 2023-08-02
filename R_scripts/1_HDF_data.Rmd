@@ -1,0 +1,115 @@
+---
+title: "1_HDF_data"
+author: "Bethany Hughes"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  rmarkdown::html_document:
+    toc: TRUE
+  
+---
+
+## Install/Load dependencies:
+```{r load_packages}
+library(dplyr)
+library(Seurat)
+library(patchwork)
+library(readxl)
+library(tidyseurat)
+library(ggplot2)
+library(tidyverse)
+library(RCurl)
+library(cowplot)
+library(sctransform)
+library(here)
+library(stringr)
+library(reshape2)
+```
+
+#Load input 10X data
+```{r}
+data_dir <- "../Input/filtered_feature_bc_matrix"
+
+list.files(data_dir)
+hdf.data <- Read10X(data.dir=data_dir, gene.column=2, cell.column=1, strip.suffix=TRUE)
+```
+
+## Inputting file which matches barcode identities with input sample identity (e.g. EP/DS/Mix) [All Data Transcript Counts_cell_annotations.csv](../Input/All Data Transcript Counts_cell_annotations.csv)
+```{r}
+cell_labels<-read.csv("../Input/All Data Transcript Counts Cleaned_suffixes.csv",header=FALSE)
+cell_labels<-as.data.frame(t(cell_labels))
+cell_labels<-cell_labels[!duplicated(cell_labels[,c('V2')]),]
+rownames(cell_labels)<-cell_labels$V2
+colnames(cell_labels)<-c("Sample_Source","Barcode")
+```
+
+## Merging sample identity data with barcodes
+```{r}
+rawUMI_cols<-as.data.frame(colnames(hdf.data))
+colnames(rawUMI_cols)[1]<-"Barcode"
+cells_with_metadata<-merge(rawUMI_cols,cell_labels,by="Barcode")
+```
+
+## Creating Seurat object
+```{r}
+hdfseurat <- CreateSeuratObject(counts = hdf.data, project = "MachineLearningSenescence", min.cells=3, min.features=200)
+hdfseurat
+
+#Adding percentage of mitochondrial genes
+hdfseurat[["percent.mt"]] <- PercentageFeatureSet(hdfseurat, pattern = "^MT-")
+metadata<-hdfseurat@meta.data
+
+#Adding a barcode column
+metadata$Barcode<-rownames(metadata)
+```
+
+## Matching sample type with barcode in the Seurat metadata
+```{r}
+DS2D_Names <- metadata %>% 
+  filter(((str_detect(Barcode, "1")))) %>%
+  select(Barcode) %>%
+  mutate(Sample = "DS2D") 
+DS3D_Names <- metadata %>% 
+  filter(((str_detect(Barcode, "2")))) %>%
+  select(Barcode) %>%
+  mutate(Sample = "DS3D") 
+EP2D_Names <- metadata %>% 
+  filter(((str_detect(Barcode, "3")))) %>%
+  select(Barcode) %>%
+  mutate(Sample = "EP2D")
+EP3D_Names <- metadata %>% 
+  filter(((str_detect(Barcode, "4")))) %>%
+  select(Barcode) %>%
+  mutate(Sample = "EP3D")
+Mix2D_Names <- metadata %>% 
+  filter(((str_detect(Barcode, "5")))) %>%
+  select(Barcode) %>%
+  mutate(Sample = "Mix2D")
+Mix3D_Names <- metadata %>% 
+  filter(((str_detect(Barcode, "6")))) %>%
+  select(Barcode) %>%
+  mutate(Sample = "Mix3D")
+
+
+x<-rbind(DS2D_Names,DS3D_Names,EP2D_Names,EP3D_Names,Mix2D_Names,Mix3D_Names)
+
+metadata_merge<-merge(metadata,x,by="Barcode")
+rownames(metadata_merge)<-metadata_merge$Barcode
+
+#Recreate Seurat object with new metadata, including genes which are expressed in at least 3 cells, and cells with more than 200 genes sequenced
+hdfseurat <- CreateSeuratObject(counts = hdf.data, project = "MachineLearningSenescence", min.cells=3, min.features=200, meta.data = metadata_merge)   
+
+```
+
+
+## Subsetting mix cells - to be removed once original files are fixed
+```{r}
+#Subsetting Mix cells - this will be excluded when I sort initial file
+hdfseurat <- subset(hdfseurat, Sample == "DS2D" | Sample == "EP2D" | Sample == "DS3D" | Sample == "EP3D")
+```
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.

@@ -1,0 +1,117 @@
+---
+title: "2D cells"
+author: "Beth"
+date: "24/09/2021"
+output: html_document
+---
+
+## Filtering Seurat to select just 2D cells for clustering 
+```{r}
+hdfseurat_filt_2D <- subset(hdfseurat_filt, Sample == "DS2D" | Sample == "EP2D")
+```
+
+## Plotting top 10 variable features in the 2D cells
+```{r}
+#Selecting highly variable features - high cell to cell variation
+hdfseurat_filt_2D <- FindVariableFeatures(hdfseurat_filt_2D, selection.method ="vst", nfeatures=2000)
+#Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(hdfseurat_filt_2D), 10)
+top10
+plot3 <- VariableFeaturePlot(hdfseurat_filt_2D)
+#Plot variable features with labels
+plot4 <- LabelPoints(plot=plot3, points = top10, repel=TRUE)
+plot4
+
+ggsave(
+  "HDF_2D_variablefeatures.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_Data_Analysis"
+  )
+```
+## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
+```{r}
+all.genes <- rownames(hdfseurat_filt_2D)
+hdfseurat_filt_2D <- ScaleData(hdfseurat_filt_2D, features = all.genes)
+
+#Performing a PCA
+hdfseurat_filt_2D <- RunPCA(hdfseurat_filt_2D, features=VariableFeatures(object = hdfseurat_filt_2D))
+
+#Plotting the PCA
+PCA_no_label <- DimPlot(hdfseurat_filt_2D, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
+PCA_Sample_label <- DimPlot(hdfseurat_filt_2D, reduction = "pca", seed = 123, group.by = "Sample")
+
+PCA_no_label
+PCA_Sample_label
+```
+
+
+## Heatmaps to investigate the genes influencing the top PCs
+```{r}
+DimHeatmap(hdfseurat_filt_2D, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(hdfseurat_filt_2D, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(hdfseurat_filt_2D) 
+
+#Suggests top 10 PCs explain most of the variance. Test this with jackstraw plot
+#hdfseurat_jackstraw <- JackStraw(hdfseurat_filt_2D, num.replicate = 100)
+#hdfseurat_jackstraw <- ScoreJackStraw(hdfseurat_jackstraw, dims = 1:20)
+#JackStrawPlot(hdfseurat_jackstraw, dims = 1:15)
+```
+
+## Clustering the cells using KNN
+```{r}
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+hdfseurat_filt_2D <- FindNeighbors(hdfseurat_filt_2D, dims =1:10)
+
+#group cells using findclusters function
+hdfseurat_filt_2D <- FindClusters(hdfseurat_filt_2D, resolution = 0.4)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(hdfseurat_filt_2D), 5)
+```
+
+## Plot UMAP
+```{r}
+#Running a UMAP
+hdfseurat_filt_2D <- RunUMAP(hdfseurat_filt_2D, dims=1:10)
+
+#Plotting UMAP with cluster IDs
+DimPlot(hdfseurat_filt_2D, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12" ))
+ggsave(
+  "UMAP_HDF_2D.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_Data_Analysis"
+  )
+
+#Colouring above UMAP plot with Sample type
+DimPlot(hdfseurat_filt_2D, reduction = "umap",group.by = "Sample", seed=123, cols = c( "#24B3A8", "#FF92A5"))
+ggsave(
+  "UMAP_HDF_2D_samplecolour.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_Data_Analysis"
+  )
+```
+#Finding DEGs/cluster biomarkers
+```{r}
+#Find markers for every cluster compared to all remaining cells, report only the positive ones
+hdfseurat.markers <- FindAllMarkers(hdfseurat_filt_2D, only.pos=FALSE, min.pct=0.25, logfc.threshold=0.25)
+
+write.csv(hdfseurat.markers,"../Output/HDF_Data_Analysis/HDF2D_clustermarkers_posandneg.csv")
+
+hdfseurat.markers %>%
+  group_by(cluster)%>%
+  top_n(n=2, wt = avg_log2FC)
+```
+## Saving Seurat Object with cluster identities
+```{r}
+saveRDS(hdfseurat_filt_2D, file = "../Output/Seurat_Objects/hdfseuratfiltered_2Dcells.rds")
+```
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.

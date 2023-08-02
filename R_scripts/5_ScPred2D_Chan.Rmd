@@ -1,0 +1,561 @@
+---
+title: "6_ScPred2D_Chan"
+author: "BH"
+date: "2023-01-24"
+output: html_document
+---
+
+## Testing ML models on external replicative senescence fibroblast single cell RNA seq data set from Chan et al. (Chan, M., Yuan, H., Soifer, I., Maile, T.M., Wang, R.Y., Ireland, A., O'Brien, J.J., Goudeau, J., Chan, L.J., Vijay, T. and Freund, A., 2022. Novel insights from a multiomics dissection of the Hayflick limit. Elife, 11, p.e70283.). 
+
+```{r}
+# Load RDS
+Chan_seurat <- readRDS("../Inputfiles/Chan_seurat.RDS")
+
+#Removing TERT data
+Chan_seurat <- subset(Chan_seurat, PDL == "PDL_25" | PDL == "PDL_29" | PDL == "PDL_33" | PDL == "PDL_37" | PDL == "PDL_46" | PDL == "PDL_50")
+```
+
+## Applying same QC metrics as my data to test for outliers. 
+nCount_RNA > 1000
+nFeature_RNA > 400
+percent.mt <= 12
+
+```{r}
+#Adding mitochondrial percentage and number of genes per UMI
+Chan_seurat$log10GenesPerUMI <- log10(Chan_seurat$nFeature_RNA) / log10(Chan_seurat$nCount_RNA)
+
+Chan_seurat[["percent.mt"]] <- PercentageFeatureSet(Chan_seurat, pattern = "^MT-")
+
+#Visualise the number of cells per sample
+Chan_seurat@meta.data %>% 
+  	ggplot(aes(x=PDL, fill=PDL)) + 
+  	geom_bar() +
+  	theme_classic() +
+  	theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	ggtitle("NCells")
+
+#Save plot
+ggsave(
+  "NumbersPerSample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+```
+## Visualising the number of UMIs per cell (nCount_RNA)
+
+```{r}
+#Number of UMIs (transcripts) per cell
+Chan_seurat@meta.data %>% 
+  	ggplot(aes(color=PDL, x=nCount_RNA, fill= PDL)) + 
+  	geom_density(alpha = 0.2) + 
+  	scale_x_log10() + 
+  	theme_classic() +
+  	ylab("Cell density") +
+  	geom_vline(xintercept = 1000)
+
+#Save plot
+ggsave(
+  "UMIspercell.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+
+```
+## Visualising number of genes per cell (nFeature_RNA)
+```{r}
+# Visualize the distribution of genes detected per cell via histogram
+Chan_seurat@meta.data %>% 
+  	ggplot(aes(color=PDL, x=nFeature_RNA, fill= PDL)) + 
+  	geom_density(alpha = 0.2) + 
+  	theme_classic() +
+  	scale_x_log10() + 
+  	geom_vline(xintercept = c(400))
+
+#Save plot
+ggsave(
+  "hist_featureRNA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+# Visualize the distribution of genes detected per cell via boxplot
+Chan_seurat@meta.data %>% 
+  	ggplot(aes(x=PDL, y=log10(nFeature_RNA), fill=PDL)) + 
+  	geom_boxplot() + 
+  	theme_classic() +
+  	theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	ggtitle("NCells vs NGenes")
+
+#Save plot
+ggsave(
+  "boxplot_featureRNA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+```
+## Combining number of genes, UMIs and mitochondrial percentage, to show thresholding boundaries
+```{r}
+Chan_seurat@meta.data %>% 
+  	ggplot(aes(x=nCount_RNA, y=nFeature_RNA, color=percent.mt)) + 
+  	geom_point() + 
+	scale_colour_gradient(low = "gray90", high = "black") +
+  	stat_smooth(method=lm) +
+  	scale_x_log10() + 
+  	scale_y_log10() + 
+  	theme_classic() +
+  	geom_vline(xintercept = 1000) +
+  	geom_hline(yintercept = 400) +
+  	facet_wrap(~PDL)
+
+#Save plot
+ggsave(
+  "threshold_feature_count_mito.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+```
+## Mitochondrial gene expression per cell
+
+```{r}
+# Visualize the distribution of mitochondrial gene expression detected per cell
+Chan_seurat@meta.data %>% 
+  	ggplot(aes(color=PDL, x=percent.mt, fill=PDL)) + 
+  	geom_density(alpha = 0.2) + 
+  	scale_x_log10() + 
+  	theme_classic() +
+  	geom_vline(xintercept = 12)
+
+#Save plot
+ggsave(
+  "mitochondrial_hist.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+```
+## Visualising the proportion of genes per UMI
+```{r}
+#Genes per UMI
+Chan_seurat@meta.data %>%
+  	ggplot(aes(x=log10GenesPerUMI, color = PDL, fill=PDL)) +
+  	geom_density(alpha = 0.2) +
+  	theme_classic() +
+  	geom_vline(xintercept = 0.8)
+```
+#Subsetting seurat object
+```{r}
+Chan_seurat2 <- subset(x=Chan_seurat, 
+                           (percent.mt <=12) &
+                            (nFeature_RNA >=400) &
+                            (nCount_RNA >= 1000))
+
+before <- table(Chan_seurat@meta.data['PDL'])
+after <- table(Chan_seurat2@meta.data['PDL'])
+
+before <- as.data.frame(before)
+after <- as.data.frame(after)
+
+combo <- merge(before, after, by = "PDL")
+
+combo <- melt(combo)
+
+combo2<-combo[!(combo$PDL=="htert_4" | combo$PDL=="htert_5" | combo$PDL=="htert_6"),]
+
+
+ggplot(combo2, aes(fill=variable, y=value, x=PDL)) + 
+    geom_bar(position="dodge", stat="identity")
+
+#Save plot
+ggsave(
+  "beforeandafterfilt.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+```
+
+## Finding top variable genes within the dataset
+
+```{r}
+#Selecting highly variable features - high cell to cell variation
+Chan_seurat2 <- FindVariableFeatures(Chan_seurat2, selection.method ="vst", nfeatures=2000)
+
+#Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(Chan_seurat2), 10)
+top10
+
+top2000 <- head(VariableFeatures(Chan_seurat2), 2000)
+top2000
+
+#Plot variable features without labels
+plot1 <- VariableFeaturePlot(Chan_seurat2)
+
+#Plot variable features with labels
+plot2 <- LabelPoints(plot=plot1, points = top10, repel=TRUE)
+plot1
+plot2
+
+ggsave(
+  "topvariablefeatures.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+```
+
+## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
+```{r}
+all.genes <- rownames(Chan_seurat2)
+Chan_seurat2 <- ScaleData(Chan_seurat2, features = all.genes)
+
+#Performing a PCA
+Chan_seurat2 <- RunPCA(Chan_seurat2, features=VariableFeatures(object = Chan_seurat2))
+
+#Plotting the PCA
+PCA_no_label <- DimPlot(Chan_seurat2, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
+PCA_Sample_label <- DimPlot(Chan_seurat2, reduction = "pca", seed = 123, group.by = "PDL")
+
+PCA_no_label
+ggsave(
+  "PCA_nolabel.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+PCA_Sample_label
+ggsave(
+  "PCA_PDLlabel.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+
+```
+## Heatmaps to investigate the genes influencing the top PCs
+```{r}
+DimHeatmap(Chan_seurat2, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(Chan_seurat2, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(Chan_seurat2)
+```
+
+
+## Clustering the cells using KNN
+```{r}
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+Chan_seurat2 <- FindNeighbors(Chan_seurat2, dims =1:10)
+
+#group cells using findclusters function
+Chan_seurat2 <- FindClusters(Chan_seurat2, resolution = 0.4)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(Chan_seurat2), 5)
+```
+## Plot UMAP
+```{r}
+#Running a UMAP
+Chan_seurat2 <- RunUMAP(Chan_seurat2, dims=1:10)
+
+#Ordering labels alphabetically
+Chan_seurat2$PDL <- factor(Chan_seurat2$PDL, levels = c("PDL_25", "PDL_29", "PDL_33", "PDL_37", "PDL_46", "PDL_50"))
+
+DimPlot(Chan_seurat2, reduction = "umap", seed = 123)
+ggsave(
+  "UMAP_clusters_all.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+DimPlot(Chan_seurat2, reduction = "umap", seed = 123, group.by="PDL", cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c"))
+ggsave(
+  "UMAP_clusters_all_Sample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+```
+
+##Testing ScPred 2D ML models on Chan datasets
+```{r}
+#MDA radial model
+query <- NormalizeData(Chan_seurat2)
+query <- scPredict(query, hdf_mda2D)
+
+DimPlot(query, group.by = "PDL", label = FALSE, repel = TRUE, label.size=2, seed=123)
+        
+       
+ggsave(
+  "UMAP_PDL_notert_Sample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("#1e2f97", "#AA336A", "antiquewhite4"))
+
+ggsave(
+  "UMAP_scpred_notert.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+```
+
+## Investigating the percentages of predicted senescent cells in each 'PDL' group
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("PDL", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat)) * 100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[order(row.names(percentages)), ]
+v <- rownames(percentages)
+
+# Create the barplot
+barplot_data <- percentages$DS2D
+barplot_names <- v
+
+png(filename = "../Output/Chan/scPred2D_Chan_barplot.png", width = 800, height = 600)  # Set appropriate width and height
+barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue", main = "Percentage of predicted senescent cells",
+        xlab = "Population Doublings", ylab = "Percentage", ylim = c(0, 100))
+dev.off()  # Turn off the PNG device
+
+```
+##Subsetting and clustering just PDL_50
+```{r}
+Chan_PDL50 <- subset(Chan_seurat2, PDL == "PDL_50")
+#Selecting highly variable features - high cell to cell variation
+Chan_PDL50 <- FindVariableFeatures(Chan_PDL50, selection.method ="vst", nfeatures=2000)
+
+all.genes <- rownames(Chan_PDL50)
+Chan_PDL50 <- ScaleData(Chan_PDL50, features = all.genes)
+
+#Performing a PCA
+Chan_PDL50 <- RunPCA(Chan_PDL50, features=VariableFeatures(object = Chan_PDL50))
+
+PCA_Sample_label <- DimPlot(Chan_PDL50, reduction = "pca", seed = 123, group.by = "PDL")
+
+PCA_Sample_label
+ggsave(
+  "PCA_PDL50_label.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+
+DimHeatmap(Chan_PDL50, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(Chan_PDL50, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(Chan_PDL50)
+```
+
+## Clustering the cells using KNN
+```{r}
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+Chan_PDL50 <- FindNeighbors(Chan_PDL50, dims =1:10)
+
+#group cells using findclusters function
+Chan_PDL50 <- FindClusters(Chan_PDL50, resolution = 0.6)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(Chan_PDL50), 5)
+
+#Running a UMAP
+Chan_PDL50 <- RunUMAP(Chan_PDL50, dims=1:10)
+DimPlot(Chan_PDL50, label = FALSE, repel = TRUE, label.size=2, seed=123, cols=c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12" ))
+
+ggsave(
+  "UMAP_PDL50.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+query <- NormalizeData(Chan_PDL50)
+query <- scPredict(query, hdf_mda2D)
+
+#Selecting highly variable features - high cell to cell variation
+query <- FindVariableFeatures(query, selection.method ="vst", nfeatures=2000)
+
+all.genes <- rownames(query)
+query <- ScaleData(query, features = all.genes)
+
+#Performing a PCA
+query <- RunPCA(query, features=VariableFeatures(object = query))
+
+DimHeatmap(query, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(query, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(query)
+
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+query <- FindNeighbors(query, dims =1:10)
+
+#group cells using findclusters function
+query <- FindClusters(query, resolution = 0.6)
+
+query <- RunUMAP(query, dims=1:10)
+DimPlot(query, label = FALSE, repel = TRUE, label.size=2, cols=c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12", "#652A0E"))
+
+ggsave(
+  "UMAP_PDL50_CLUST.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+DimPlot(query, label = FALSE, repel = TRUE, label.size=2, seed=123, group.by="scpred_prediction", cols = c("darkblue", "deeppink3", "antiquewhite4"))
+ggsave(
+  "UMAP_PDL50_SCPRED.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+
+## Number of DS cells predicted per cluster
+query2 <- query@meta.data
+table <- table(query2[, c("seurat_clusters", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+v <- rownames(percentages)
+
+
+barplot(percentages$DS2D, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted senescent cells",
+xlab="Cluster Identity",
+ylab="Percentage", ylim=c(0,100))
+
+```
+
+Using monocle trajectory analysis on the PDL50 cells 
+```{r}
+library(monocle3)
+library(SeuratWrappers)
+
+cds <- as.cell_data_set(query)
+
+#Using Seurat's clustering information rather than new Monocle3 clustering
+#Assign all the cells to one partition (one supercluster)
+
+recreate.partition <- c(rep(1,length(cds@colData@rownames)))
+names(recreate.partition) <- cds@colData@rownames
+recreate.partition <- as.factor(recreate.partition)
+
+#Assign this to the partition slot
+cds@clusters$UMAP$partitions <- recreate.partition
+
+
+#Assign the cluster info from Seurat
+list_cluster <- query@active.ident
+cds@clusters$UMAP$clusters <- list_cluster
+
+cds@int_colData@listData$reducedDims$UMAP <- query@reductions$umap@cell.embeddings
+
+
+cds <- learn_graph(cds)
+plot_cells(cds,
+           color_cells_by = "PDL",
+           label_groups_by_cluster=FALSE,
+           label_leaves=FALSE,
+           label_branch_points=FALSE)
+
+## 
+
+get_earliest_principal_node <- function(cds, scpred_prediction="EP2D"){
+  cell_ids <- which(colData(cds)[, "scpred_prediction"] == scpred_prediction)
+  
+  closest_vertex <-
+  cds@principal_graph_aux[["UMAP"]]$pr_graph_cell_proj_closest_vertex
+  closest_vertex <- as.matrix(closest_vertex[colnames(cds), ])
+  root_pr_nodes <-
+  igraph::V(principal_graph(cds)[["UMAP"]])$name[as.numeric(names
+  (which.max(table(closest_vertex[cell_ids,]))))]
+  
+  root_pr_nodes
+}
+
+cds <- order_cells(cds, root_pr_nodes=get_earliest_principal_node(cds))
+
+plot_cells(cds,
+           color_cells_by = "pseudotime",
+           label_cell_groups=FALSE,
+           label_leaves=FALSE,
+           label_branch_points=FALSE,
+           label_groups_by_cluster = FALSE,
+           label_roots = FALSE,
+           graph_label_size=1.5)
+
+plot_cells(cds,
+           color_cells_by = "scpred_prediction",
+           label_cell_groups=FALSE,
+           label_leaves=FALSE,
+           label_branch_points=FALSE,
+           label_roots=FALSE,
+           graph_label_size=1.5) + scale_color_manual(values =c("#1e2f97", "#AA336A", "antiquewhite4"))
+
+
+
+```
+
+
+```{r}
+pseudotime(cds)
+cds$monocle3_pseudotime <- pseudotime(cds)
+data.pseudo <- as.data.frame(colData(cds))
+
+data.pseudo2 <- subset(data.pseudo, scpred_prediction != "unassigned")
+library(ggpubr)
+
+#Frequency dist
+ggdensity(data.pseudo2, x = "monocle3_pseudotime", 
+          add = "mean", rug = TRUE, color="scpred_prediction")
+
+
+ggplot(data.pseudo2, aes(x=monocle3_pseudotime, color=`scpred_prediction`))  + geom_density(alpha=0.1, bw=0.5) + xlim(0,25)
+
+
+FeaturePlot(query, features = c("CDKN1A", "CDKN2A"))     
+ggsave(
+  "pdl50_cdkn1a_cdkn2a.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Chan"
+  )
+
+
+```
+
+
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.

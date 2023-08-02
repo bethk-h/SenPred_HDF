@@ -1,0 +1,423 @@
+---
+title: "Sole boldo"
+author: "BH"
+date: '2022-06-23'
+output: html_document
+---
+
+```{r}
+Sole <- readRDS("../Input/Sole-Boldo_SeuratObject_New-AD21-Clusters.rds")
+Sole$SoleBoldo_name
+Idents(object = Sole) <- Sole$SoleBoldo_name
+
+#Extracting just the fibroblasts
+Sole_fibs <- subset(x = Sole, idents = c("1_Secretory-reticular fibroblasts", "2_Pro-inflammatory fibroblasts", "9_Mesenchymal fibroblasts", "3_Secretory-Papillary fibroblasts"))
+```
+## Applying same QC metrics as my data to test for outliers. 
+nCount_RNA > 1000
+nFeature_RNA > 400
+percent.mt <= 12
+
+
+```{r}
+#Adding mitochondrial percentage and number of genes per UMI
+Sole_fibs$log10GenesPerUMI <- log10(Sole_fibs$nFeature_RNA) / log10(Sole_fibs$nCount_RNA)
+
+Sole_fibs[["percent.mt"]] <- PercentageFeatureSet(Sole_fibs, pattern = "^MT-")
+
+#Visualise the number of cells per sample
+Sole_fibs@meta.data %>% 
+  	ggplot(aes(x=SoleBoldo_name, fill=SoleBoldo_name)) + 
+  	geom_bar() +
+  	theme_classic() +
+  	theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	ggtitle("NCells")
+
+#Save plot
+ggsave(
+  "NumbersPerSample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+
+```
+
+## Visualising the number of UMIs per cell (nCount_RNA)
+
+```{r}
+#Number of UMIs (transcripts) per cell
+Sole_fibs@meta.data %>% 
+  	ggplot(aes(color=SoleBoldo_name, x=nCount_RNA, fill= SoleBoldo_name)) + 
+  	geom_density(alpha = 0.2) + 
+  	scale_x_log10() + 
+  	theme_classic() +
+  	ylab("Cell density") +
+  	geom_vline(xintercept = 1000)
+
+#Save plot
+ggsave(
+  "UMIspercell.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+
+
+```
+
+## Visualising number of genes per cell (nFeature_RNA)
+```{r}
+# Visualize the distribution of genes detected per cell via histogram
+Sole_fibs@meta.data %>% 
+  	ggplot(aes(color=SoleBoldo_name, x=nFeature_RNA, fill= SoleBoldo_name)) + 
+  	geom_density(alpha = 0.2) + 
+  	theme_classic() +
+  	scale_x_log10() + 
+  	geom_vline(xintercept = c(400))
+
+#Save plot
+ggsave(
+  "hist_featureRNA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+
+# Visualize the distribution of genes detected per cell via boxplot
+Sole_fibs@meta.data %>% 
+  	ggplot(aes(x=SoleBoldo_name, y=log10(nFeature_RNA), fill=SoleBoldo_name)) + 
+  	geom_boxplot() + 
+  	theme_classic() +
+  	theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	ggtitle("NCells vs NGenes")
+
+#Save plot
+ggsave(
+  "boxplot_featureRNA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+```
+
+## Combining number of genes, UMIs and mitochondrial percentage, to show thresholding boundaries
+```{r}
+Sole_fibs@meta.data %>% 
+  	ggplot(aes(x=nCount_RNA, y=nFeature_RNA, color=percent.mt)) + 
+  	geom_point() + 
+	scale_colour_gradient(low = "gray90", high = "black") +
+  	stat_smooth(method=lm) +
+  	scale_x_log10() + 
+  	scale_y_log10() + 
+  	theme_classic() +
+  	geom_vline(xintercept = 1000) +
+  	geom_hline(yintercept = 400) +
+  	facet_wrap(~SoleBoldo_name)
+
+#Save plot
+ggsave(
+  "threshold_feature_count_mito.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+```
+
+## Mitochondrial gene expression per cell
+
+```{r}
+# Visualize the distribution of mitochondrial gene expression detected per cell
+Sole_fibs@meta.data %>% 
+  	ggplot(aes(color=SoleBoldo_name, x=percent.mt, fill=SoleBoldo_name)) + 
+  	geom_density(alpha = 0.2) + 
+  	scale_x_log10() + 
+  	theme_classic() +
+  	geom_vline(xintercept = 12)
+
+#Save plot
+ggsave(
+  "mitochondrial_hist.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+```
+
+## Visualising the proportion of genes per UMI
+```{r}
+#Genes per UMI
+Sole_fibs@meta.data %>%
+  	ggplot(aes(x=log10GenesPerUMI, color = SoleBoldo_name, fill=SoleBoldo_name)) +
+  	geom_density(alpha = 0.2) +
+  	theme_classic() +
+  	geom_vline(xintercept = 0.8)
+```
+
+#Subsetting seurat object
+```{r}
+Sole_fibs2 <- subset(x=Sole_fibs, 
+                           (percent.mt <=12) &
+                            (nFeature_RNA >=400) &
+                            (nCount_RNA >= 1000))
+
+before <- table(Sole_fibs@meta.data['SoleBoldo_name'])
+after <- table(Sole_fibs2@meta.data['SoleBoldo_name'])
+
+before <- as.data.frame(before)
+after <- as.data.frame(after)
+
+combo <- merge(before, after, by = "SoleBoldo_name")
+
+
+combo2 <- melt(combo)
+
+
+
+ggplot(combo2, aes(fill=variable, y=value, x=SoleBoldo_name)) + 
+    geom_bar(position="dodge", stat="identity")
+
+#Save plot
+ggsave(
+  "beforeandafterfilt.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+
+```
+
+## Finding top variable genes within the dataset
+
+```{r}
+#Selecting highly variable features - high cell to cell variation
+Sole_fibs2 <- FindVariableFeatures(Sole_fibs2, selection.method ="vst", nfeatures=2000)
+
+#Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(Sole_fibs2), 10)
+top10
+
+top2000 <- head(VariableFeatures(Sole_fibs2), 2000)
+top2000
+
+#Plot variable features without labels
+plot1 <- VariableFeaturePlot(Sole_fibs2)
+
+#Plot variable features with labels
+plot2 <- LabelPoints(plot=plot1, points = top10, repel=TRUE)
+plot1
+plot2
+
+ggsave(
+  "topvariablefeatures.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+```
+
+## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
+```{r}
+all.genes <- rownames(Sole_fibs2)
+Sole_fibs2 <- ScaleData(Sole_fibs2, features = all.genes)
+
+#Performing a PCA
+Sole_fibs2 <- RunPCA(Sole_fibs2, features=VariableFeatures(object = Sole_fibs2))
+
+#Plotting the PCA
+PCA_no_label <- DimPlot(Sole_fibs2, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
+PCA_Sample_label <- DimPlot(Sole_fibs2, reduction = "pca", seed = 123, group.by = "SoleBoldo_name")
+
+PCA_no_label
+ggsave(
+  "PCA_nolabel.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+
+PCA_Sample_label
+ggsave(
+  "PCA_PDLlabel.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+
+
+```
+
+## Heatmaps to investigate the genes influencing the top PCs
+```{r}
+DimHeatmap(Sole_fibs2, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(Sole_fibs2, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(Sole_fibs2)
+```
+
+## Clustering the cells using KNN
+```{r}
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+Sole_fibs2 <- FindNeighbors(Sole_fibs2, dims =1:10)
+
+#group cells using findclusters function
+Sole_fibs2 <- FindClusters(Sole_fibs2, resolution = 0.6)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(Sole_fibs2), 5)
+```
+
+## Plot UMAP
+```{r}
+#Running a UMAP
+Sole_fibs2 <- RunUMAP(Sole_fibs2, dims=1:10)
+
+DimPlot(Sole_fibs2, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12", "#652A0E", "tan3", "peachpuff", "blue", "red", "brown"))
+ggsave(
+  "UMAP_clusters_all.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+
+
+DimPlot(Sole_fibs2, reduction = "umap", seed = 123, group.by="SoleBoldo_name", cols = c("#2e5266", "#ecb0e1", "#832232", "#a6a867", "#bc5f04", "#f9a52c"))
+ggsave(
+  "UMAP_clusters_all_Sample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+```
+
+##Testing ScPred 2D ML models on Chan datasets
+```{r}
+#MDA radial model
+query <- NormalizeData(Sole_fibs2)
+query <- scPredict(query, hdf_mda2D)
+
+DimPlot(query, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123)
+        
+       
+ggsave(
+  "UMAP_PDL_notert_Sample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+
+
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4"))
+
+ggsave(
+  "UMAP_scpred_EPDS_2D.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+```
+
+## Investigating the percentage of DS predicted cells per age
+
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("age", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+
+
+df <- tibble::rownames_to_column(percentages, "age")
+perc <- melt(df)
+v <- perc$age
+
+#convert 'variable' to factor and specify level order
+perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', 'DS2D'))
+
+#create stacked bar chart
+ggplot(perc, aes(x=age, y=value, fill=variable)) + 
+    geom_bar(position='stack', stat='identity') +
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#00CA00", "darkblue"))
+
+
+```
+## Testing EP/ES/DS model
+```{r}
+#MDA radial model
+query <- NormalizeData(Sole_fibs2)
+query <- scPredict(query, HDF_Chan_combined_scPred)
+
+DimPlot(query, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123)
+      
+
+
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "#228c22", "antiquewhite4"))
+
+
+
+ggsave(
+  "UMAP_scpred_EPESDS_2D.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+
+#Colour UMAP by age  E2C1F3 Yellow: F5E45F Teal: 00C69E Orange: FD7A39 Blue: 07BDFF Pink: FE51B0
+DimPlot(query, group.by = "age", label = FALSE, repel = TRUE, seed=123, cols = c("#cc889d", "#f5c5a0", "#7dae9b", "#8abfe8", "#5c7998", "#7b78b8"))
+
+ggsave(
+  "UMAP_scpred_EPESDS_2D_AGE.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
+```
+
+## Investigating the percentage of DS predicted cells per age
+
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("age", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+
+
+df <- tibble::rownames_to_column(percentages, "age")
+perc <- melt(df)
+v <- perc$age
+
+#convert 'variable' to factor and specify level order
+perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', 'DS2D'))
+
+#create stacked bar chart
+ggplot(perc, aes(x=age, y=value, fill=variable)) + 
+    geom_bar(position='stack', stat='identity') +
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue" ))
+
+
+```
+
+
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.
