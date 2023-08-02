@@ -98,7 +98,7 @@ ggsave(
 #Find markers for every cluster compared to all remaining cells, report only the positive ones
 hdfseurat.markers <- FindAllMarkers(hdfseurat_filt_3D, only.pos=FALSE, min.pct=0.25, logfc.threshold=0.25)
 
-write.csv(hdfseurat.markers,"../Output/HDF_Data_Analysis/Cluster_markers/HDF3D_clustermarkers_posandneg.csv")
+write.csv(hdfseurat.markers,"../Output/HDF_Data_Analysis/HDF3D_clustermarkers_posandneg.csv")
 ```
 
 ## Building 3D ML model using ScPred
