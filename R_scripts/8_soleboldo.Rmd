@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r}
-Sole <- readRDS("../Input/Sole-Boldo_SeuratObject_New-AD21-Clusters.rds")
+Sole <- readRDS("../Inputfiles/Sole-Boldo_SeuratObject_New-AD21-Clusters.rds")
 Sole$SoleBoldo_name
 Idents(object = Sole) <- Sole$SoleBoldo_name
 
@@ -291,7 +291,7 @@ ggsave(
   )
 ```
 
-##Testing ScPred 2D ML models on Chan datasets
+##Testing ScPred 2D MDA ML model on Chan datasets
 ```{r}
 #MDA radial model
 query <- NormalizeData(Sole_fibs2)
@@ -345,8 +345,13 @@ perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', '
 #create stacked bar chart
 ggplot(perc, aes(x=age, y=value, fill=variable)) + 
     geom_bar(position='stack', stat='identity') +
-  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#00CA00", "darkblue"))
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue"))
 
+ggsave("barplot_stacked_2Dpred_age.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldo"
+  )
 
 ```
 ## Testing EP/ES/DS model
@@ -410,6 +415,11 @@ ggplot(perc, aes(x=age, y=value, fill=variable)) +
     geom_bar(position='stack', stat='identity') +
   scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue" ))
 
+ggsave("barplot_stacked_2Dpred_EPESDS.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Tabib"
+  )
 
 ```
 

@@ -7,10 +7,7 @@ output: html_document
 
 ## Filtering Seurat to select just 3D cells for clustering 
 ```{r}
-hdfseurat_filt <- readRDS("../Output/Seurat_Objects/hdfseuratfiltered_allcells.rds")
-
- hdfseurat_filt_3D <- subset(hdfseurat_filt, Sample == "DS3D" | Sample == "EP3D")
-#hdfseurat_filt_3D <- subset(hdfseurat_filt, Sample == "DS3D")
+hdfseurat_filt_3D <- subset(hdfseurat_filt, Sample == "DS3D" | Sample == "EP3D")
 ```
 
 ## Plotting top 10 variable features in the 3D cells
@@ -159,6 +156,16 @@ ggsave(
   device = "tiff",
   path = "../Output/HDF_ScPred"
   )
+
+##Save training and testing datasets
+saveRDS(training, file = "../Output/Seurat_Objects/hdfseuratfiltered_3Dtraining.rds")
+saveRDS(testing, file =  "../Output/Seurat_Objects/hdfseuratfiltered_3Dtesting_EPESDS.rds" )
+
+## Note - every time you run the script you will get slightly different results. This is because the training and testing splits are random. If you want to exactly replicate your results, move the training and testing files into 'Input/Seurat_Objects' and load them in each time.
+
+#training <- readRDS("../Input/Seurat_Objects/hdfseuratfiltered_3Dtraining.rds")
+#testing <- readRDS("../Input/Seurat_Objects/hdfseuratfiltered_3Dtesting.rds")
+
 ```
 
 ```{r}
@@ -371,7 +378,9 @@ cm <- confusionMatrix(perc)
 
 # Drawing confusion matrix into visual table
 
-draw_confusion_matrix <- function(cm) {
+draw_confusion_matrix <- function(cm, output_file) {
+
+  draw_matrix_plot <- function() {
 
   layout(matrix(c(1,1,2)))
   par(mar=c(2,2,2,2))
@@ -401,61 +410,19 @@ draw_confusion_matrix <- function(cm) {
 
 }  
 
-draw_confusion_matrix(cm)
+  # Call the function to draw the matrix plot
+  draw_matrix_plot()
 
-```
-
-##Exploring principal  components in the training dataset
-```{r}
-#Exploring principal components in the referencedataset 
-pca <- training[['pca']]
-head(Loadings(training, reduction = "pca"))
-output <- as.matrix( Loadings(training, reduction = "pca"))
-loadings <- as.matrix(pca@feature.loadings)
+  # Save the plot as a PNG file
+  png(filename = output_file, width = 800, height = 600)  # Set appropriate width and height
+  draw_matrix_plot()
+  dev.off()  # Turn off the PNG device
+}
 
 
-PCA <- (ProjectDim(training, reduction = "pca"))
-VizDimLoadings(PCA, dims = 1:10, reduction = "pca")
-DimHeatmap(PCA, dims = 1, cells = 500, balanced = TRUE)
-PCA <- as.matrix(PCA@reductions[["pca"]]@feature.loadings)
-
-embeddings <- as.matrix(pca@cell.embeddings)
-barcodelabels <- training@meta.data[c("Barcode","Sample")]
-
-
-merge <- merge(embeddings, barcodelabels, by='row.names')
-DS3D <- subset(merge, Sample == "DS3D")
-DS3D <- DS3D[-c(1,52, 53)]
-EP3D <- subset(merge, Sample == "EP3D")
-EP3D <- EP3D[-c(1,52, 53)]
-
-medianEP3D <- as.matrix(apply(EP3D,2,median))
-medianDS3D <- as.matrix(apply(DS3D,2,median))
-
-merge2 <- merge(medianEP3D, medianDS3D, by='row.names')
-rowname <- gsub("PC", "scpred", merge2$Row.names)
-merge3 <- cbind (merge2, rowname)
-
-merge4 <- merge3[-c(1)]
-
-colnames(merge4) <- c("EP3D_3Dmodel", "DS3D_3Dmodel", "PC")
-rownames(merge4) <- merge4[,3]
-merge4 <- merge4[,-3]
-merge4 <- as.matrix(merge4)
-
-install.packages("heatmap3")
-library("gplots")
-
-breaks <- unique(c(seq(-2,-1.1,length=100),seq(-1,0.9,length=100), seq(1,2,length=100)))
-my_palette <- colorRampPalette(c("yellow","white","white", "blue"))(length(breaks)-1)
-
-
-heatmap.2(merge4, scale = "none", col = bluered(100), 
-          trace = "none", density.info = "none", cexRow=0.3)
-
-
-
-heatmap(merge4, cexRow=0.3, cexCol=0.7,  breaks=seq(-2, -1, 0,1,2))
+your_confusion_matrix <- cm
+output_file_path <- "../Output/HDF_ScPred/scPred3D_MDA_CM.png"
+draw_confusion_matrix(your_confusion_matrix, output_file_path)
 
 ```
 

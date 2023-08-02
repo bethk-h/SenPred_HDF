@@ -5,7 +5,7 @@ date: '2022-04-25'
 output: html_document
 ---
 ```{r}
-Tabib <- readRDS("../Input/Tabib_SeuratObject_AD23-Clusters (1).rds")
+Tabib <- readRDS("../Inputfiles/Tabib_SeuratObject_AD23-Clusters (1).rds")
 Idents(object = Tabib) <- Tabib$Tabib_name
 
 #Extracting just the fibroblasts
@@ -362,9 +362,14 @@ percentages <- percentages[ order(row.names(percentages)), ]
 v <- rownames(percentages)
 
 
-barplot(percentages$DS2D, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted deeply senescent cells",
-xlab="Population Doublings",
-ylab="Percentage", ylim=c(0,100))
+barplot_data <- percentages$DS2D
+barplot_names <- v
+
+png(filename = "../Output/Tabib/scPred2D_Tabib_barplot_percentageDS.png", width = 800, height = 600)  # Set appropriate width and height
+barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue", main = "Percentage of predicted deeply senescent cells", xlab="Population Doublings",
+         ylab = "Percentage", ylim = c(0, 100))
+dev.off() 
+
 ```
 ## Investigating the percentage of DS predicted cells per age
 
@@ -395,6 +400,11 @@ ggplot(perc, aes(x=age, y=value, fill=variable)) +
     geom_bar(position='stack', stat='identity') +
   scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue"))
 
+ggsave("barplot_stacked_2Dpred_age.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Tabib"
+  )
 
 ```
 
