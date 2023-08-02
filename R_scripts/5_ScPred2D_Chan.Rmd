@@ -1,5 +1,5 @@
 ---
-title: "6_ScPred2D_Chan"
+title: "5_ScPred2D_Chan"
 author: "BH"
 date: "2023-01-24"
 output: html_document
@@ -500,7 +500,7 @@ get_earliest_principal_node <- function(cds, scpred_prediction="EP2D"){
 
 cds <- order_cells(cds, root_pr_nodes=get_earliest_principal_node(cds))
 
-plot_cells(cds,
+plot <- plot_cells(cds,
            color_cells_by = "pseudotime",
            label_cell_groups=FALSE,
            label_leaves=FALSE,
@@ -509,7 +509,10 @@ plot_cells(cds,
            label_roots = FALSE,
            graph_label_size=1.5)
 
-plot_cells(cds,
+ggsave("../Output/Chan/pseudotimetrajectory.png", plot, width = 8, height = 6, dpi = 300)
+
+
+plot2 <-plot_cells(cds,
            color_cells_by = "scpred_prediction",
            label_cell_groups=FALSE,
            label_leaves=FALSE,
@@ -517,6 +520,7 @@ plot_cells(cds,
            label_roots=FALSE,
            graph_label_size=1.5) + scale_color_manual(values =c("#1e2f97", "#AA336A", "antiquewhite4"))
 
+ggsave("../Output/Chan/pseudotimetrajectory_scpred.png", plot2, width = 8, height = 6, dpi = 300)
 
 
 ```

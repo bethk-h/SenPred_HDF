@@ -1,5 +1,5 @@
 ---
-title: "Model_DS_ES_EP"
+title: "6_ScPred2D_Chan_EPESDS"
 author: "BH"
 date: '2022-11-15'
 output: html_document
@@ -29,7 +29,7 @@ options(future.globals.maxSize = 12000 * 1024^2)
 
 
 ```{r}
-#Batch corrections
+#Subsetting PDL50 'early senescent' cells
 ES <- subset(Chan_seurat2, PDL == "PDL_50")
 
 #Adding PDL to a 'Sample' column to help with merge 
@@ -43,17 +43,22 @@ ES <- AddMetaData(ES, ESMetaTrim)
 ES$Barcode <- ES$barcode
 ES$barcode <- NULL
 
+#Normalising ES data
 ES <- NormalizeData(ES, verbose = FALSE)
+
+#Finding variable features in ES data
 ES <- FindVariableFeatures(ES, selection.method = "vst", nfeatures = 2000)
+
 
 hdfseurat_filt_2D <- NormalizeData(hdfseurat_filt_2D, verbose = FALSE)
 hdfseurat_filt_2D <- FindVariableFeatures(hdfseurat_filt_2D, selection.method = "vst", nfeatures = 2000)
 
+#Integrating two datasets by finding anchors
 Anchors <- FindIntegrationAnchors(object.list = list(ES, hdfseurat_filt_2D), dims = 1:20)
 Combined <- IntegrateData(anchorset = Anchors, dims = 1:20)
 ```
 
-## Plotting top 10 variable features in the 2D cells
+## Plotting top 10 variable features in the cells
 ```{r}
 #Selecting highly variable features - high cell to cell variation
 Combined<- FindVariableFeatures(Combined, selection.method ="vst", nfeatures=2000)
@@ -74,7 +79,8 @@ ggsave(
   )
 
 ```
-##PCA 
+
+## PCA 
 ```{r}
 all.genes <- rownames(Combined)
 HDF_Chan_combined <- ScaleData(Combined, features = all.genes)
@@ -143,7 +149,7 @@ ggsave(
 
 ```
 
-Building an MDA model 
+Building an MDA model including the third 'ES' classifier
 ```{r}
 HDF_Chan_combined$new_col <- NULL
 #HDF_Chan_combined$New_Col <- NULL
@@ -177,6 +183,15 @@ testing <- obj_list$Test%>%
 
 DimPlot(testing, group.by = "Sample", label = FALSE, repel=TRUE, seed=123)
 
+##Save training and testing datasets
+saveRDS(training, file = "../Output/Seurat_Objects/hdfseuratfiltered_2Dtraining_EPESDS.rds")
+saveRDS(testing, file =  "../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting_EPESDS.rds" )
+
+## Note - every time you run the script you will get slightly different results. This is because the training and testing splits are random. If you want to exactly replicate your results, move the training and testing files into 'Input/Seurat_Objects' and load them in each time.
+
+#training <- readRDS("../Input/Seurat_Objects/hdfseuratfiltered_2Dtraining_EPESDS.rds")
+#testing <- readRDS("../Input/Seurat_Objects/hdfseuratfiltered_2Dtesting_EPESDS.rds")
+
 ```
 
 
@@ -207,15 +222,17 @@ ggsave(
   device = "tiff",
   path = "../Output/Early_senescence"
   )
+
 DimPlot(query, group.by = "Sample", label = FALSE, repel = TRUE, seed = 123)
 ggsave(
   "UMAP_scpred_MDA_ES_SAMPLE.tiff",
   plot = last_plot(),
   device = "tiff",
-  path = "../Output/HDF_Data_ScPred/2D_SVM"
+  path = "../Output/Early_senescence/2D_SVM"
   )
 ```
-#Confusion matrix plot
+
+## Confusion matrix plot
 ```{r}
 query_df <- query@meta.data
 query_df <- query_df %>%
@@ -284,8 +301,9 @@ cm <- confusionMatrix(perc)
 
 # Drawing confusion matrix into visual table
 
-draw_confusion_matrix <- function(cm) {
+draw_confusion_matrix <- function(cm, output_file) {
 
+  draw_matrix_plot <- function() {
   layout(matrix(c(1,1)))
   par(mar=c(2,2,2,2))
   plot(c(100, 345), c(200, 470), type = "n", xlab="", ylab="", xaxt='n', yaxt='n')
@@ -327,11 +345,20 @@ draw_confusion_matrix <- function(cm) {
   text(284, 253, res[9], cex=1.2, font=2, col='white')
   text(120, 200, 'Unassigned =', cex=0.9, font=1, col='black')
   text(155, 201, unassigned, cex=0.9, font=1, col='black')
+}
+  # Call the function to draw the matrix plot
+  draw_matrix_plot()
 
-}  
+  # Save the plot as a PNG file
+  png(filename = output_file, width = 800, height = 600)  # Set appropriate width and height
+  draw_matrix_plot()
+  dev.off()  # Turn off the PNG device
+}
 
 
-draw_confusion_matrix(cm)
+your_confusion_matrix <- cm
+output_file_path <- "../Output/Early_senescence/CM2D_SVM_testing.png"
+draw_confusion_matrix(your_confusion_matrix, output_file_path)
 
 ```
 # Running ES model on whole Chan dataset
@@ -366,10 +393,13 @@ as.matrix(percentages)
 percentages <- percentages[ order(row.names(percentages)), ]
 v <- rownames(percentages)
 
+barplot_data <- percentages$PDL50
+barplot_names <- v
 
-barplot(percentages$PDL50, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted early senescent cells",
-xlab="Population Doublings",
-ylab="Percentage", ylim=c(0,100))
+png(filename = "../Output/Early_Senescence/scPred2D_Chan_barplot_ESperPDL.png", width = 800, height = 600)  # Set appropriate width and height
+barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue", main = "Percentage of predicted senescent cells",
+        xlab = "Population Doublings", ylab = "Percentage", ylim = c(0, 100))
+dev.off() 
 
 ```
 
@@ -398,9 +428,14 @@ as.matrix(percentages)
 percentages <- percentages[ order(row.names(percentages)), ]
 v <- rownames(percentages)
 
+barplot_data <- percentages$PDL50
+barplot_names <- v
 
-barplot(percentages$PDL50, names=v, cex.names=0.7, col="darkblue", main="Percentage of predicted early senescent cells",,
-ylab="Percentage", ylim=c(0,100))
+png(filename = "../Output/Early_Senescence/scPred2D_Chan_barplot_ESperEPDS.png", width = 800, height = 600)  # Set appropriate width and height
+barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue", main = "Percentage of predicted early senescent cells",
+         ylab = "Percentage", ylim = c(0, 100))
+dev.off() 
+
 
 ```
 ### Session information
