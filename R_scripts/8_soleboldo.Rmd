@@ -418,7 +418,7 @@ ggplot(perc, aes(x=age, y=value, fill=variable)) +
 ggsave("barplot_stacked_2Dpred_EPESDS.tiff",
   plot = last_plot(),
   device = "tiff",
-  path = "../Output/Tabib"
+  path = "../Output/SoleBoldo"
   )
 
 ```
