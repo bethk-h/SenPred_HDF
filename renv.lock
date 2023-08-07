@@ -3,6 +3,26 @@
     "Version": "4.3.1",
     "Repositories": [
       {
+        "Name": "BioCsoft",
+        "URL": "https://bioconductor.org/packages/3.17/bioc"
+      },
+      {
+        "Name": "BioCann",
+        "URL": "https://bioconductor.org/packages/3.17/data/annotation"
+      },
+      {
+        "Name": "BioCexp",
+        "URL": "https://bioconductor.org/packages/3.17/data/experiment"
+      },
+      {
+        "Name": "BioCworkflows",
+        "URL": "https://bioconductor.org/packages/3.17/workflows"
+      },
+      {
+        "Name": "BioCbooks",
+        "URL": "https://bioconductor.org/packages/3.17/books"
+      },
+      {
         "Name": "CRAN",
         "URL": "https://cran.rstudio.com"
       }
@@ -157,7 +177,7 @@
     },
     "DelayedArray": {
       "Package": "DelayedArray",
-      "Version": "0.26.6",
+      "Version": "0.26.7",
       "Source": "Bioconductor",
       "Requirements": [
         "BiocGenerics",
@@ -171,7 +191,7 @@
         "stats",
         "stats4"
       ],
-      "Hash": "0df7d9f448796a41bd9a2717f38ebdd7"
+      "Hash": "ef6ff3e15ce624118e6cf8151e58e38c"
     },
     "DelayedMatrixStats": {
       "Package": "DelayedMatrixStats",
@@ -366,13 +386,13 @@
     },
     "MatrixGenerics": {
       "Package": "MatrixGenerics",
-      "Version": "1.12.2",
+      "Version": "1.12.3",
       "Source": "Bioconductor",
       "Requirements": [
         "matrixStats",
         "methods"
       ],
-      "Hash": "62f2e21697e9aeed7bcb3f482ac25dd7"
+      "Hash": "10a6bd0dcabaeede87616e4465b6ac6f"
     },
     "MatrixModels": {
       "Package": "MatrixModels",
@@ -2729,7 +2749,7 @@
       "RemoteRepo": "monocle3",
       "RemoteUsername": "cole-trapnell-lab",
       "RemoteRef": "HEAD",
-      "RemoteSha": "b545460966874948eb11a57a225594a107f1694d",
+      "RemoteSha": "fc4f032a01bf4bd6842b5a3e1bfbbceedac590e7",
       "Requirements": [
         "Biobase",
         "BiocGenerics",
@@ -2790,7 +2810,7 @@
         "uwot",
         "viridis"
       ],
-      "Hash": "ebb88a831e98539b932fc5b2298a8ff5"
+      "Hash": "55d07125da1f77f22b798e7f4e0946d5"
     },
     "multcompView": {
       "Package": "multcompView",
