@@ -75,8 +75,22 @@ head(Idents(hdfseurat_filt_2D), 5)
 #Running a UMAP
 hdfseurat_filt_2D <- RunUMAP(hdfseurat_filt_2D, dims=1:10)
 
+# Customize theme to increase axis label and key label size
+custom_theme <- function(base_size = 12) {
+  theme_minimal() +
+    theme(
+      axis.title = element_text(size = base_size + 2),
+         axis.text = element_text(size = base_size),
+      legend.text = element_text(size = base_size),
+      panel.grid = element_blank(),  # Remove grid background
+      axis.line = element_line(),    # Add axes lines
+      panel.border = element_blank() 
+    )
+}
+
 #Plotting UMAP with cluster IDs
-DimPlot(hdfseurat_filt_2D, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12" ))
+DimPlot(hdfseurat_filt_2D, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12" )) + 
+  custom_theme(base_size=20)
 ggsave(
   "UMAP_HDF_2D.tiff",
   plot = last_plot(),
@@ -85,7 +99,8 @@ ggsave(
   )
 
 #Colouring above UMAP plot with Sample type
-DimPlot(hdfseurat_filt_2D, reduction = "umap",group.by = "Sample", seed=123, cols = c( "#24B3A8", "#FF92A5"))
+DimPlot(hdfseurat_filt_2D, reduction = "umap",group.by = "Sample", seed=123, cols = c( "#24B3A8", "#FF92A5")) +
+  custom_theme(base_size-20)
 ggsave(
   "UMAP_HDF_2D_samplecolour.tiff",
   plot = last_plot(),
