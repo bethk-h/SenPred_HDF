@@ -271,7 +271,8 @@ head(Idents(Tabib_fibs2), 5)
 #Running a UMAP
 Tabib_fibs2 <- RunUMAP(Tabib_fibs2, dims=1:10)
 
-DimPlot(Tabib_fibs2, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48"))
+DimPlot(Tabib_fibs2, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48")) +
+  custom_theme(base_size=20)
 ggsave(
   "UMAP_clusters_all.tiff",
   plot = last_plot(),
@@ -279,7 +280,8 @@ ggsave(
   path = "../Output/Tabib"
   )
 
-DimPlot(Tabib_fibs2, reduction = "umap", seed = 123, group.by="Tabib_name", cols = c("#2e5266", "#ecb0e1", "#832232", "#a6a867", "#bc5f04", "#f9a52c"))
+DimPlot(Tabib_fibs2, reduction = "umap", seed = 123, group.by="Tabib_name", cols = c("#2e5266", "#ecb0e1", "#832232", "#a6a867", "#bc5f04", "#f9a52c")) + 
+  custom_theme(base_size=20)
 ggsave(
   "UMAP_clusters_all_Sample.tiff",
   plot = last_plot(),
@@ -294,7 +296,8 @@ ggsave(
 query <- NormalizeData(Tabib_fibs2)
 query <- scPredict(query, hdf_mda2D)
 
-DimPlot(query, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123)
+DimPlot(query, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123) + 
+  custom_theme(base_size=20)
         
        
 ggsave(
@@ -305,7 +308,8 @@ ggsave(
   )
 
 
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4"))
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4")) + 
+  custom_theme(base_size=20)
 
 ggsave(
   "UMAP_scpred_EPDS_2D.tiff",
@@ -320,11 +324,11 @@ ggsave(
 query <- NormalizeData(Tabib_fibs2)
 query <- scPredict(query, HDF_Chan_combined_scPred)
 
-DimPlot(query, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123)
+DimPlot(query, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123) + 
+  custom_theme(base_size=20)
       
-
-
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "#228c22", "antiquewhite4"))
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "#228c22", "antiquewhite4")) + 
+  custom_theme(base_size=20)
 
 ggsave(
   "UMAP_scpred_EPESDS_2D.tiff",
@@ -334,7 +338,8 @@ ggsave(
   )
 
 #Colour UMAP by age
-DimPlot(query, group.by = "age", label = FALSE, repel = TRUE, seed=123, cols = c("#cc889d", "#f5c5a0", "#7dae9b", "#8abfe8", "#5c7998", "#7b78b8"))
+DimPlot(query, group.by = "age", label = FALSE, repel = TRUE, seed=123, cols = c("#cc889d", "#f5c5a0", "#7dae9b", "#8abfe8", "#5c7998", "#7b78b8")) + 
+  custom_theme(base_size=20)
 
 ggsave(
   "UMAP_scpred_EPESDS_2D_AGE.tiff",
@@ -366,7 +371,7 @@ barplot_data <- percentages$DS2D
 barplot_names <- v
 
 png(filename = "../Output/Tabib/scPred2D_Tabib_barplot_percentageDS.png", width = 800, height = 600)  # Set appropriate width and height
-barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue", main = "Percentage of predicted deeply senescent cells", xlab="Population Doublings",
+barplot(barplot_data, names = barplot_names, cex.names = 1.8, cex.axis = 1.7, cex.lab = 1.7, cex.main=2.5, col = "darkblue", main = "Percentage of predicted deeply senescent cells", xlab="Population Doublings",
          ylab = "Percentage", ylim = c(0, 100))
 dev.off() 
 
@@ -398,7 +403,8 @@ perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', '
 #create stacked bar chart
 ggplot(perc, aes(x=age, y=value, fill=variable)) + 
     geom_bar(position='stack', stat='identity') +
-  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue"))
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue")) +
+  custom_theme(base_size=20)
 
 ggsave("barplot_stacked_2Dpred_age.tiff",
   plot = last_plot(),

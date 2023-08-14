@@ -100,7 +100,7 @@ ggsave(
 
 #Colouring above UMAP plot with Sample type
 DimPlot(hdfseurat_filt_2D, reduction = "umap",group.by = "Sample", seed=123, cols = c( "#24B3A8", "#FF92A5")) +
-  custom_theme(base_size-20)
+  custom_theme(base_size=20)
 ggsave(
   "UMAP_HDF_2D_samplecolour.tiff",
   plot = last_plot(),

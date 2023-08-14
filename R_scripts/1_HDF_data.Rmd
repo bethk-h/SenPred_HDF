@@ -23,6 +23,7 @@ library(sctransform)
 library(here)
 library(stringr)
 library(reshape2)
+library(ggplot2)
 ```
 
 #Load input 10X data

@@ -76,7 +76,8 @@ head(Idents(hdfseurat_filt_3D), 5)
 hdfseurat_filt_3D <- RunUMAP(hdfseurat_filt_3D, dims=1:10)
 
 #Plotting UMAP with cluster IDs
-DimPlot(hdfseurat_filt_3D, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12" ))
+DimPlot(hdfseurat_filt_3D, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12" )) +
+  custom_theme(base_size=20)
 ggsave(
   "UMAP_HDF_3D.tiff",
   plot = last_plot(),
@@ -85,7 +86,8 @@ ggsave(
   )
 
 #Colouring above UMAP plot with Sample type
-DimPlot(hdfseurat_filt_3D, reduction = "umap",group.by = "Sample", seed=123, cols=c( "#24B3A8", "#FF92A5"))
+DimPlot(hdfseurat_filt_3D, reduction = "umap",group.by = "Sample", seed=123, cols=c( "#24B3A8", "#FF92A5")) +
+  custom_theme(base_size=20)
 ggsave(
   "UMAP_HDF_3D_samplecolour.tiff",
   plot = last_plot(),
@@ -165,7 +167,6 @@ saveRDS(testing, file =  "../Output/Seurat_Objects/hdfseuratfiltered_3Dtesting_E
 
 #training <- readRDS("../Input/Seurat_Objects/hdfseuratfiltered_3Dtraining.rds")
 #testing <- readRDS("../Input/Seurat_Objects/hdfseuratfiltered_3Dtesting.rds")
-
 ```
 
 ```{r}
@@ -318,14 +319,16 @@ query <- scPredict(query, hdf_mda3D, recompute_alignment = FALSE)
 
 #Plotting UMAP of predicted senescent cells
 query <- RunUMAP(query, reduction = "scpred", dims = 1:10)
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed = 123, cols = c("darkblue", "deeppink3"))
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed = 123, cols = c("darkblue", "deeppink3")) +
+  custom_theme(base_size=20)
 ggsave(
   "UMAP_scpred_testing3D.tiff",
   plot = last_plot(),
   device = "tiff",
   path = "../Output/HDF_Data_ScPred/3D_MDA"
   )
-DimPlot(query, group.by = "Sample", label = FALSE, repel = TRUE, seed = 123)
+DimPlot(query, group.by = "Sample", label = FALSE, repel = TRUE, seed = 123) +
+  custom_theme(base_size=20)
 ggsave(
   "UMAP_scpred_testing3D_SAMPLE.tiff",
   plot = last_plot(),

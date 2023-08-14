@@ -273,7 +273,8 @@ head(Idents(Sole_fibs2), 5)
 #Running a UMAP
 Sole_fibs2 <- RunUMAP(Sole_fibs2, dims=1:10)
 
-DimPlot(Sole_fibs2, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12", "#652A0E", "tan3", "peachpuff", "blue", "red", "brown"))
+DimPlot(Sole_fibs2, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12", "#652A0E", "tan3", "peachpuff", "blue", "red", "brown")) +
+  custom_theme(base_size=20)
 ggsave(
   "UMAP_clusters_all.tiff",
   plot = last_plot(),
@@ -282,7 +283,8 @@ ggsave(
   )
 
 
-DimPlot(Sole_fibs2, reduction = "umap", seed = 123, group.by="SoleBoldo_name", cols = c("#2e5266", "#ecb0e1", "#832232", "#a6a867", "#bc5f04", "#f9a52c"))
+DimPlot(Sole_fibs2, reduction = "umap", seed = 123, group.by="SoleBoldo_name", cols = c("#2e5266", "#ecb0e1", "#832232", "#a6a867", "#bc5f04", "#f9a52c"))+
+  custom_theme(base_size=20)
 ggsave(
   "UMAP_clusters_all_Sample.tiff",
   plot = last_plot(),
@@ -297,7 +299,8 @@ ggsave(
 query <- NormalizeData(Sole_fibs2)
 query <- scPredict(query, hdf_mda2D)
 
-DimPlot(query, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123)
+DimPlot(query, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123) +
+  custom_theme(base_size=20)
         
        
 ggsave(
@@ -308,7 +311,8 @@ ggsave(
   )
 
 
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4"))
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4")) +
+  custom_theme(base_size=20)
 
 ggsave(
   "UMAP_scpred_EPDS_2D.tiff",
@@ -345,7 +349,8 @@ perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', '
 #create stacked bar chart
 ggplot(perc, aes(x=age, y=value, fill=variable)) + 
     geom_bar(position='stack', stat='identity') +
-  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue"))
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue")) +
+  custom_theme(base_size=20)
 
 ggsave("barplot_stacked_2Dpred_age.tiff",
   plot = last_plot(),
@@ -360,11 +365,13 @@ ggsave("barplot_stacked_2Dpred_age.tiff",
 query <- NormalizeData(Sole_fibs2)
 query <- scPredict(query, HDF_Chan_combined_scPred)
 
-DimPlot(query, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123)
+DimPlot(query, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123) +
+  custom_theme(base_size=20)
       
 
 
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "#228c22", "antiquewhite4"))
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "#228c22", "antiquewhite4")) +
+  custom_theme(base_size=20)
 
 
 
@@ -376,7 +383,8 @@ ggsave(
   )
 
 #Colour UMAP by age  E2C1F3 Yellow: F5E45F Teal: 00C69E Orange: FD7A39 Blue: 07BDFF Pink: FE51B0
-DimPlot(query, group.by = "age", label = FALSE, repel = TRUE, seed=123, cols = c("#cc889d", "#f5c5a0", "#7dae9b", "#8abfe8", "#5c7998", "#7b78b8"))
+DimPlot(query, group.by = "age", label = FALSE, repel = TRUE, seed=123, cols = c("#cc889d", "#f5c5a0", "#7dae9b", "#8abfe8", "#5c7998", "#7b78b8")) +
+  custom_theme(base_size=20)
 
 ggsave(
   "UMAP_scpred_EPESDS_2D_AGE.tiff",
@@ -413,7 +421,9 @@ perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', '
 #create stacked bar chart
 ggplot(perc, aes(x=age, y=value, fill=variable)) + 
     geom_bar(position='stack', stat='identity') +
-  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue" ))
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue" )) +
+  custom_theme(base_size=20)
+
 
 ggsave("barplot_stacked_2Dpred_EPESDS.tiff",
   plot = last_plot(),

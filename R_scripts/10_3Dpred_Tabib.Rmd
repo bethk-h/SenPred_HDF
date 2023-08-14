@@ -11,10 +11,12 @@ output: html_document
 query <- NormalizeData(Tabib_fibs2)
 query <- scPredict(query, hdf_mda3D)
 
-DimPlot(query, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123)
+DimPlot(query, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123) +
+  custom_theme(base_size=20)
         
 
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4"))
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4")) +
+  custom_theme(base_size=20)
 
 ggsave(
   "UMAP_scpred_EPDS_3D.tiff",
