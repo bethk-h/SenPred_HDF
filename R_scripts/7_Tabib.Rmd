@@ -5,7 +5,7 @@ date: '2022-04-25'
 output: html_document
 ---
 ```{r}
-Tabib <- readRDS("../Inputfiles/Tabib_SeuratObject_AD23-Clusters (1).rds")
+Tabib <- readRDS("../Inputfiles/Tabib_SeuratObject_AD23-Clusters.rds")
 Idents(object = Tabib) <- Tabib$Tabib_name
 
 #Extracting just the fibroblasts

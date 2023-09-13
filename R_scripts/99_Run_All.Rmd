@@ -19,6 +19,9 @@ library(rmarkdown)
 files_in_r_to_run <- 
   c("1_HDF_data.Rmd","2_HDF_filtering_normalisation.Rmd", "3_HDF_2DCells.Rmd", "4_ScPred_2D.Rmd", "5_ScPred2d_Chan.Rmd", "6_ScPred2D_Chan_EPESDS.Rmd", "7_Tabib.Rmd", "8_soleboldo.Rmd", "9_ScPred_3D.Rmd", "10_3Dpred_Tabib.Rmd", "11_3Dpred_SoleBoldo.Rmd")
 
+files_in_r_to_run <- 
+  c("7_Tabib.Rmd", "8_soleboldo.Rmd", "9_ScPred_3D.Rmd", "10_3Dpred_Tabib.Rmd", "11_3Dpred_SoleBoldo.Rmd")
+
 for(i1 in 1:length(files_in_r_to_run)){
   
   rmarkdown::render(here("R_scripts", files_in_r_to_run[i1]),

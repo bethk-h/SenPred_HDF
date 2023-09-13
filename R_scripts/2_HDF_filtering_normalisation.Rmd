@@ -68,9 +68,7 @@ UMIspercell <- hdfseurat@meta.data %>%
   	           scale_x_log10() + 
   	           theme_classic() +
   	           ylab("Cell density") +
-  	           geom_vline(xintercept = 1000) +
-  custom_theme(base_size=20)
-
+  	           geom_vline(xintercept = 1000)
 UMIspercell
 
 #Save plot
@@ -90,9 +88,7 @@ hist_feature<- hdfseurat@meta.data %>%
   	           geom_density(alpha = 0.2) + 
   	           theme_classic() +
   	           scale_x_log10() + 
-  	           geom_vline(xintercept = c(400)) +
-  custom_theme(base_size=20)
-
+  	           geom_vline(xintercept = c(400))
 hist_feature
 
 #Save plot
@@ -136,9 +132,7 @@ thresholding <- hdfseurat@meta.data %>%
   	            theme_classic() +
   	            geom_vline(xintercept = 1000) +
   	            geom_hline(yintercept = 400) +
-  	            facet_wrap(~Sample) +
-  custom_theme(base_size=20)
-
+  	            facet_wrap(~Sample) 
 thresholding
 
 ggsave(
@@ -156,9 +150,7 @@ mitochondrial_genes <- hdfseurat@meta.data %>%
   	                   geom_density(alpha = 0.2) + 
   	                   scale_x_log10() + 
   	                   theme_classic() +
-  	                   geom_vline(xintercept = 12) +
-  custom_theme(base_size=20)
-
+  	                   geom_vline(xintercept = 12) 
 mitochondrial_genes
 
 ggsave(
@@ -174,9 +166,7 @@ genesperUMI <- hdfseurat@meta.data %>%
   	           ggplot(aes(x=log10GenesPerUMI, color = Sample, fill=Sample)) +
   	           geom_density(alpha = 0.2) +
   	           theme_classic() +
-  	           geom_vline(xintercept = 0.8) +
-  custom_theme(base_size=20)
-
+  	           geom_vline(xintercept = 0.8) 
 genesperUMI
 
 ggsave(
@@ -197,9 +187,7 @@ hdfseurat_filt <- subset(x=hdfseurat,
 #Visualising number of cells before and after subsetting
 df.list <- list(Original=hdfseurat@meta.data, Filtered=hdfseurat_filt@meta.data)
 dat <- stack(lapply(df.list, `[[`, "Sample"))
-numbers_after_filt <- ggplot(dat, aes(x=values, fill=ind)) + geom_bar(position="dodge") +
-  custom_theme(base_size=20)
-
+numbers_after_filt <- ggplot(dat, aes(x=values, fill=ind)) + geom_bar(position="dodge") 
 numbers_after_filt
 
 ggsave(

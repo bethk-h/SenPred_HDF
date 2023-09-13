@@ -28,6 +28,13 @@ for(i1 in 1:length(dirs_to_clean)){
     dir(here(dirs_to_clean[i1]), recursive = TRUE)
   file.remove(here(dirs_to_clean[i1], temp_file_list))
 }
+
+dirs_to_clean <- c("Output/Seurat_Objects")
+
+
+if(!dir.exists(here(dirs_to_clean))){
+  dir.create(here(dirs_to_clean))
+}
 ```
 
 
