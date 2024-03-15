@@ -18,6 +18,20 @@ nFeature_RNA > 400
 percent.mt <= 12
 
 To filter, we wil go back to our Seurat object and use the subset() function:
+```{r}
+# Customize theme to increase axis label and key label size
+custom_theme <- function(base_size = 12) {
+  theme_minimal() +
+    theme(
+      axis.title = element_text(size = base_size + 2),
+         axis.text = element_text(size = base_size),
+      legend.text = element_text(size = base_size),
+      panel.grid = element_blank(),  # Remove grid background
+      axis.line = element_line(),    # Add axes lines
+      panel.border = element_blank() 
+    )
+}
+```
 
 
 ```{r}
@@ -31,7 +45,8 @@ CellNumbers <- hdfseurat@meta.data %>%
   	           theme_classic() +
   	           theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   	           theme(plot.title = element_text(hjust=0.5, face="bold")) +
-  	           ggtitle("NCells")
+  	           ggtitle("NCells") +
+              custom_theme(base_size=20)
 
 CellNumbers
 
@@ -68,7 +83,8 @@ UMIspercell <- hdfseurat@meta.data %>%
   	           scale_x_log10() + 
   	           theme_classic() +
   	           ylab("Cell density") +
-  	           geom_vline(xintercept = 1000) 
+  	           geom_vline(xintercept = 1000)  +
+              custom_theme(base_size=20)
 
 UMIspercell
 
@@ -89,7 +105,8 @@ hist_feature<- hdfseurat@meta.data %>%
   	           geom_density(alpha = 0.2) + 
   	           theme_classic() +
   	           scale_x_log10() + 
-  	           geom_vline(xintercept = c(400)) 
+  	           geom_vline(xintercept = c(400))  +
+              custom_theme(base_size=20)
 
 hist_feature
 
@@ -108,7 +125,8 @@ boxplot_feature <- hdfseurat@meta.data %>%
   	               theme_classic() +
   	               theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   	               theme(plot.title = element_text(hjust=0.5, face="bold")) +
-  	               ggtitle("NCells vs NGenes")
+  	               ggtitle("NCells vs NGenes") +
+              custom_theme(base_size=20)
 
 boxplot_feature
 
@@ -134,7 +152,8 @@ thresholding <- hdfseurat@meta.data %>%
   	            theme_classic() +
   	            geom_vline(xintercept = 1000) +
   	            geom_hline(yintercept = 400) +
-  	            facet_wrap(~Sample) 
+  	            facet_wrap(~Sample)  +
+              custom_theme(base_size=20)
 
 thresholding
 
@@ -153,7 +172,8 @@ mitochondrial_genes <- hdfseurat@meta.data %>%
   	                   geom_density(alpha = 0.2) + 
   	                   scale_x_log10() + 
   	                   theme_classic() +
-  	                   geom_vline(xintercept = 12) 
+  	                   geom_vline(xintercept = 12)  +
+              custom_theme(base_size=20)
 
 mitochondrial_genes
 
@@ -170,7 +190,8 @@ genesperUMI <- hdfseurat@meta.data %>%
   	           ggplot(aes(x=log10GenesPerUMI, color = Sample, fill=Sample)) +
   	           geom_density(alpha = 0.2) +
   	           theme_classic() +
-  	           geom_vline(xintercept = 0.8) 
+  	           geom_vline(xintercept = 0.8)  +
+              custom_theme(base_size=20)
 
 genesperUMI
 
