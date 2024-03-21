@@ -8,14 +8,14 @@ output: html_document
 ##Testing ScPred 3D ML MDA model on Tabib datasets
 ```{r}
 #MDA radial model
-query <- NormalizeData(Tabib_fibs2)
-query <- scPredict(query, hdf_mda3D)
+querytabib3D <- NormalizeData(Tabib_fibs2)
+querytabib3D <- scPredict(querytabib3D, hdf_mda3D)
 
-DimPlot(query, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123) +
+DimPlot(querytabib3D, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123) +
   custom_theme(base_size=20)
         
 
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4")) +
+DimPlot(querytabib3D, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4")) +
   custom_theme(base_size=20)
 
 ggsave(
@@ -29,7 +29,7 @@ ggsave(
 ## Investigating the percentage of DS predicted cells per age
 
 ```{r}
-query2 <- query@meta.data
+query2 <- querytabib3D@meta.data
 table <- table(query2[, c("age", "scpred_prediction")])
 table
 mat <- as.data.frame.matrix(table)
@@ -42,6 +42,8 @@ percentages
 as.matrix(percentages)
 percentages <- percentages[ order(row.names(percentages)), ]
 v <- rownames(percentages)
+
+print(percentages)
 
 barplot_data <- percentages$DS3D
 barplot_names <- v
@@ -68,6 +70,7 @@ as.matrix(percentages)
 percentages <- percentages[ order(row.names(percentages)), ]
 v <- rownames(percentages)
 
+print(percentages)
 barplot_data <- percentages$DS3D
 barplot_names <- v
 

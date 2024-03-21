@@ -1,0 +1,189 @@
+---
+title: "Soleboldo_tabib_combined2"
+author: "BH"
+date: "2024-03-09"
+output: html_document
+---
+##Integrate Tabib and Sole seurat objects which contain 2D EP/ES/DS senpred predictions 
+```{r}
+list <- list(querytabib, querysole)
+
+applySCTransformToList <- function(seuratList) {
+  transformedList <- list()
+  
+  for (i in seq_along(seuratList)) {
+    seuratObj <- seuratList[[i]]
+    
+    # Check if the object has already been SCTransformed
+    if (!"SCT" %in% colnames(seuratObj)) {
+      # Apply SCTransform if not already done
+      seuratObj <- SCTransform(seuratObj)
+    } else {
+      message(paste("SCTransform already applied to Seurat object in list at index", i))
+    }
+    
+    transformedList[[i]] <- seuratObj
+  }
+  
+  return(transformedList)
+}
+
+# Apply SCTransform to each Seurat object in the list
+transformed_seurat_list <- applySCTransformToList(list)
+
+# Check the transformed objects
+head(transformed_seurat_list[[1]]$RNA, n = 5)  # Replace "RNA" with your assay name
+head(transformed_seurat_list[[2]]$RNA, n = 5)  # Replace "RNA" with your assay name
+
+# Select integration features
+integ_features <- SelectIntegrationFeatures(object.list = transformed_seurat_list, 
+                                            nfeatures = 18000)
+
+# Prepare for integration
+list <- PrepSCTIntegration(object.list = transformed_seurat_list, 
+                            anchor.features = integ_features)
+
+# Find integration anchors
+integ_anchors <- FindIntegrationAnchors(object.list = list, 
+                                        normalization.method = "LogNormalize", 
+                                        anchor.features = integ_features)
+
+# Integrate data
+seurat_integrated <- IntegrateData(anchorset = integ_anchors, 
+                                   normalization.method = "LogNormalize")
+
+
+```
+
+```{r}
+#Selecting highly variable features - high cell to cell variation
+seurat_integrated <- FindVariableFeatures(seurat_integrated, selection.method ="vst", nfeatures=18000)
+#Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(seurat_integrated), 10)
+top10
+plot3 <- VariableFeaturePlot(seurat_integrated)
+#Plot variable features with labels
+plot4 <- LabelPoints(plot=plot3, points = top10, repel=TRUE)
+plot4
+
+ggsave(
+  "tabibsole_integrated_variablefeatures.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/HDF_Data_Analysis"
+  )
+```
+
+```{r}
+all.genes <- rownames(seurat_integrated)
+seurat_integrated <- ScaleData(seurat_integrated, features = all.genes)
+
+#Performing a PCA
+seurat_integrated <- RunPCA(seurat_integrated, features=VariableFeatures(object = seurat_integrated))
+
+#Plotting the PCA
+PCA_no_label <- DimPlot(seurat_integrated, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
+PCA_Sample_label <- DimPlot(seurat_integrated, reduction = "pca", seed = 123, group.by = "scpred_prediction")
+
+PCA_no_label
+PCA_Sample_label
+```
+
+```{r}
+DimHeatmap(seurat_integrated, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(seurat_integrated, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(seurat_integrated) 
+
+#Suggests top 10 PCs explain most of the variance. Test this with jackstraw plot
+#hdfseurat_jackstraw <- JackStraw(hdfseurat_filt_2D, num.replicate = 100)
+#hdfseurat_jackstraw <- ScoreJackStraw(hdfseurat_jackstraw, dims = 1:20)
+#JackStrawPlot(hdfseurat_jackstraw, dims = 1:15)
+```
+
+## Clustering the cells using KNN
+```{r}
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+seurat_integrated <- FindNeighbors(seurat_integrated, dims =1:10)
+
+#group cells using findclusters function
+seurat_integrated <- FindClusters(seurat_integrated, resolution = 0.4)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(seurat_integrated), 5)
+```
+
+## Plot UMAP
+```{r}
+#Running a UMAP
+seurat_integrated <- RunUMAP(seurat_integrated, dims=1:10)
+
+#Plotting UMAP with cluster IDs
+DimPlot(seurat_integrated, reduction = "umap", seed = 123) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "UMAP_tabibsoleintegrated.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+
+#Colouring above UMAP plot with Sample type
+sample <- DimPlot(seurat_integrated, reduction = "umap",group.by = "scpred_prediction", seed=123,  cols = c("darkblue", "deeppink3", "#00CA00", "antiquewhite4")) +
+  custom_theme(base_size=20)
+
+print(sample)
+
+ggsave(
+  "UMAP_tabibsoleintegrated_samplecolour_2D.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+
+```
+##Finding percentage prediction for each donor age
+```{r}
+seurat_integrated2 <- seurat_integrated@meta.data
+table <- table(seurat_integrated2[, c("age", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+v <- rownames(percentages)
+
+print(percentages)
+
+df <- tibble::rownames_to_column(percentages, "age")
+percentage2 <- melt(df)
+
+##Reordering variables
+percentage2$variable <- factor(percentage2$variable, levels = c("unassigned", "EP2D", "PDL50", "DS2D"))
+
+
+percplot <- ggplot(percentage2, aes(x=age, y=value, fill=variable)) + 
+    geom_bar(position='stack', stat='identity') +
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue")) +
+  custom_theme(base_size=20)
+
+percplot
+
+ggsave(
+  "barplot_scpred_percentages.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+
+
+```
+### Session information
+```{r session_info_99}
+sessionInfo()
+```

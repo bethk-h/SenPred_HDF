@@ -1,0 +1,434 @@
+---
+title: "14_soleboldo_tabib_combined3D"
+author: "BH"
+date: "2024-03-21"
+output: html_document
+---
+
+```{r}
+list <- list(querytabib3D, querysole3D)
+
+applySCTransformToList <- function(seuratList) {
+  transformedList <- list()
+  
+  for (i in seq_along(seuratList)) {
+    seuratObj <- seuratList[[i]]
+    
+    # Check if the object has already been SCTransformed
+    if (!"SCT" %in% colnames(seuratObj)) {
+      # Apply SCTransform if not already done
+      seuratObj <- SCTransform(seuratObj)
+    } else {
+      message(paste("SCTransform already applied to Seurat object in list at index", i))
+    }
+    
+    transformedList[[i]] <- seuratObj
+  }
+  
+  return(transformedList)
+}
+
+# Apply SCTransform to each Seurat object in the list
+transformed_seurat_list <- applySCTransformToList(list)
+
+# Check the transformed objects
+head(transformed_seurat_list[[1]]$RNA, n = 5)  # Replace "RNA" with your assay name
+head(transformed_seurat_list[[2]]$RNA, n = 5)  # Replace "RNA" with your assay name
+
+# Select integration features
+integ_features <- SelectIntegrationFeatures(object.list = transformed_seurat_list, 
+                                            nfeatures = 18000)
+
+# Prepare for integration
+list <- PrepSCTIntegration(object.list = transformed_seurat_list, 
+                            anchor.features = integ_features)
+
+# Find integration anchors
+integ_anchors <- FindIntegrationAnchors(object.list = list, 
+                                        normalization.method = "LogNormalize", 
+                                        anchor.features = integ_features)
+
+# Integrate data
+seurat_integrated_3D <- IntegrateData(anchorset = integ_anchors, 
+                                   normalization.method = "LogNormalize")
+
+
+```
+
+```{r}
+#Selecting highly variable features - high cell to cell variation
+seurat_integrated_3D <- FindVariableFeatures(seurat_integrated_3D, selection.method ="vst", nfeatures=18000)
+#Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(seurat_integrated_3D), 10)
+top10
+plot3 <- VariableFeaturePlot(seurat_integrated_3D)
+#Plot variable features with labels
+plot4 <- LabelPoints(plot=plot3, points = top10, repel=TRUE)
+plot4
+
+ggsave(
+  "tabibsole_integrated_3D_variablefeatures.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_integrated"
+  )
+```
+
+```{r}
+all.genes <- rownames(seurat_integrated_3D)
+seurat_integrated_3D <- ScaleData(seurat_integrated_3D, features = all.genes)
+
+#Performing a PCA
+seurat_integrated_3D <- RunPCA(seurat_integrated_3D, features=VariableFeatures(object = seurat_integrated_3D))
+
+#Plotting the PCA
+PCA_no_label <- DimPlot(seurat_integrated_3D, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
+PCA_Sample_label <- DimPlot(seurat_integrated_3D, reduction = "pca", seed = 123, group.by = "scpred_prediction")
+
+PCA_no_label
+PCA_Sample_label
+```
+
+```{r}
+DimHeatmap(seurat_integrated_3D, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(seurat_integrated_3D, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(seurat_integrated_3D) 
+
+#Suggests top 10 PCs explain most of the variance. Test this with jackstraw plot
+#hdfseurat_jackstraw <- JackStraw(hdfseurat_filt_2D, num.replicate = 100)
+#hdfseurat_jackstraw <- ScoreJackStraw(hdfseurat_jackstraw, dims = 1:20)
+#JackStrawPlot(hdfseurat_jackstraw, dims = 1:15)
+```
+
+## Clustering the cells using KNN
+```{r}
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+seurat_integrated_3D <- FindNeighbors(seurat_integrated_3D, dims =1:10)
+
+#group cells using findclusters function
+seurat_integrated_3D <- FindClusters(seurat_integrated_3D, resolution = 0.4)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(seurat_integrated_3D), 5)
+```
+
+## Plot UMAP
+```{r}
+#Running a UMAP
+seurat_integrated_3D <- RunUMAP(seurat_integrated_3D, dims=1:10)
+
+#Plotting UMAP with cluster IDs
+DimPlot(seurat_integrated_3D, reduction = "umap", seed = 123) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "UMAP_tabibsoleintegrated3D.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+
+#Colouring above UMAP plot with Sample type
+DimPlot(seurat_integrated_3D, reduction = "umap",group.by = "scpred_prediction", seed=123) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "UMAP_tabibsoleintegrated3D_samplecolour.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+
+#Colouring above UMAP plot with Sample type
+DimPlot(seurat_integrated_3D, reduction = "umap",group.by = "orig.ident", seed=123) 
+
+DimPlot(seurat_integrated_3D, reduction = "umap",group.by = "age", seed=123) 
+
+DimPlot(seurat_integrated_3D, reduction = "umap",group.by = "age_group", seed=123) 
+
+```
+## Generating a correlation matrix of a panel of selected senescence genes
+```{r}
+# Subset the Seurat object based on scpred_prediction
+filtered_seurat <- subset(seurat_integrated_3D, subset = scpred_prediction == "DS3D")
+
+# Extract gene counts for filtered cells
+gene_counts <- filtered_seurat@assays$RNA@counts
+
+# Define gene list 
+gene_list <- c("CDKN1A", "CDKN2A", "IGFBP3", "SERPINE1", "IGF1", "CXCL12", "IL6", "IL8", "MMP3", "TP53", "IL1B")
+
+# Check if gene names in gene_list are present in row names (genes)
+missing_genes <- gene_list[!gene_list %in% rownames(gene_counts)]
+if (length(missing_genes) > 0) {
+  stop(paste("Genes missing in gene counts:", paste(missing_genes, collapse = ", ")))
+}
+
+# Filter gene counts based on the gene list
+gene_counts <- gene_counts[gene_list, ]
+gene_counts <- as.matrix(gene_counts)
+# Transpose gene counts matrix
+gene_counts_transposed <- t(gene_counts)
+gene_counts_transposed <- as.matrix(gene_counts_transposed)
+
+# Calculate correlation matrix
+correlation_matrix <- cor(gene_counts_transposed)
+
+# Print correlation matrix
+print(correlation_matrix)
+
+# Define breaks and color palette
+breaks <- unique(c(seq(-1,-0.0001,length=50),seq(-0.00001,0.01,length=50), seq(0.011,1,length=50)))
+my_palette <- colorRampPalette(c("blue","white", "white", "red"))(length(breaks)-1)
+
+library("gplots")
+
+heatmap <- heatmap.2(correlation_matrix, 
+                     col = my_palette, 
+                     breaks = breaks, 
+                     key = TRUE, 
+                     trace = "none", 
+                     main = "Marker Correlation_DS_TabibSole", 
+                     key.title = "Correlation",   
+                     cexRow = 0.6, 
+                     cexCol = 0.6,    
+                     distfun = function(x) dist(x, method = "euclidean"),
+                     hclust = function(x) hclust(x, method = "ward.D2"), 
+                     symkey = FALSE, 
+                     Rowv = FALSE,
+                     Colv = FALSE,
+                     density.info = c("none")) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "Markercorrelation_DS_tabibsole.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+```
+
+## Extract example correlation plots
+#CDKN1A vs CDKN2A
+```{r}
+# Extract counts for CDKN1A and CDKN2A from Seurat object - DS only
+CDKN1A_counts <- filtered_seurat@assays$RNA@counts["CDKN1A", ]
+CDKN2A_counts <- filtered_seurat@assays$RNA@counts["CDKN2A", ]
+
+# Combine counts into a data frame
+counts_df <- data.frame(CDKN1A = CDKN1A_counts, CDKN2A = CDKN2A_counts)
+
+# Print the first few rows of the data frame
+print(head(counts_df))
+
+# Create scatterplot
+ggplot(counts_df, aes(x = CDKN1A, y = CDKN2A)) +
+  geom_point() +
+  labs(x = "CDKN1A counts", y = "CDKN2A counts", title = "Scatterplot of CDKN1A vs CDKN2A counts_EP")
+
+# Compute the Pearson correlation coefficient
+correlation <- cor(counts_df$CDKN1A, counts_df$CDKN2A)
+print(correlation)
+
+# Create scatterplot 
+ggplot(counts_df, aes(x = CDKN1A, y = CDKN2A)) +
+  geom_point() +
+  labs(x = "CDKN1A counts", y = "CDKN2A counts", title = "Scatterplot of CDKN1A vs CDKN2A counts_DS") +
+  annotate("text", x = min(counts_df$CDKN1A), y = max(counts_df$CDKN2A), 
+           label = paste("Pearson Correlation:", round(correlation, 2)), 
+           hjust = -1, vjust = 1, color = "black", size = 6) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "scatterplot_CDKN1ACDKN2A_DS.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+
+## Run the same for EP
+# Extract just EP
+filtered_seurat_EP <- subset(seurat_integrated_3D, subset = scpred_prediction == "EP3D")
+
+# Extract counts for CDKN1A and CDKN2A from Seurat object - DS only
+CDKN1A_counts <- filtered_seurat_EP@assays$RNA@counts["CDKN1A", ]
+CDKN2A_counts <- filtered_seurat_EP@assays$RNA@counts["CDKN2A", ]
+
+# Combine counts into a data frame
+counts_df <- data.frame(CDKN1A = CDKN1A_counts, CDKN2A = CDKN2A_counts)
+
+# Print the first few rows of the data frame
+print(head(counts_df))
+
+# Create scatterplot
+ggplot(counts_df, aes(x = CDKN1A, y = CDKN2A)) +
+  geom_point() +
+  labs(x = "CDKN1A counts", y = "CDKN2A counts", title = "Scatterplot of CDKN1A vs CDKN2A counts_EP")
+
+# Compute the Pearson correlation coefficient
+correlation <- cor(counts_df$CDKN1A, counts_df$CDKN2A)
+print(correlation)
+
+# Create scatterplot 
+ggplot(counts_df, aes(x = CDKN1A, y = CDKN2A)) +
+  geom_point() +
+  labs(x = "CDKN1A counts", y = "CDKN2A counts", title = "Scatterplot of CDKN1A vs CDKN2A counts_EP") +
+  annotate("text", x = min(counts_df$CDKN1A), y = max(counts_df$CDKN2A), 
+           label = paste("Pearson Correlation:", round(correlation, 2)), 
+           hjust = -1, vjust = 1, color = "black", size = 6) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "scatterplot_CDKN1ACDKN2A_EP.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+
+
+```
+
+#IL6 vs IL8
+```{r}
+# Extract counts for IL6 and IL8 from Seurat object - DS
+IL6_counts <- filtered_seurat@assays$RNA@counts["IL6", ]
+IL8_counts <- filtered_seurat@assays$RNA@counts["IL8", ]
+
+# Combine counts into a data frame
+counts_df <- data.frame(IL6 = IL6_counts, IL8 = IL8_counts)
+
+# Print the first few rows of the data frame
+print(head(counts_df))
+
+# Create scatterplot
+ggplot(counts_df, aes(x = IL6, y = IL8)) +
+  geom_point() +
+  labs(x = "IL6 counts", y = "IL8 counts", title = "Scatterplot of IL6 vs IL8 counts")
+
+# Compute the Pearson correlation coefficient
+correlation <- cor(counts_df$IL6, counts_df$IL8)
+print(correlation)
+
+# Create scatterplot 
+ggplot(counts_df, aes(x = IL6, y = IL8)) +
+  geom_point() +
+  labs(x = "IL6 counts", y = "IL8 counts", title = "Scatterplot of IL6 vs IL8 counts_DS") +
+  annotate("text", x = min(counts_df$IL6), y = max(counts_df$IL8), 
+           label = paste("Pearson Correlation:", round(correlation, 2)), 
+           hjust = -1, vjust = 1, color = "black", size = 6) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "scatterplot_IL6IL8_DS.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+
+# Extract counts for IL6 and IL8 from Seurat object - EP
+IL6_counts <- filtered_seurat_EP@assays$RNA@counts["IL6", ]
+IL8_counts <- filtered_seurat_EP@assays$RNA@counts["IL8", ]
+
+# Combine counts into a data frame
+counts_df <- data.frame(IL6 = IL6_counts, IL8 = IL8_counts)
+
+# Print the first few rows of the data frame
+print(head(counts_df))
+
+# Create scatterplot
+ggplot(counts_df, aes(x = IL6, y = IL8)) +
+  geom_point() +
+  labs(x = "IL6 counts", y = "IL8 counts", title = "Scatterplot of IL6 vs IL8 counts")
+
+# Compute the Pearson correlation coefficient
+correlation <- cor(counts_df$IL6, counts_df$IL8)
+print(correlation)
+
+# Create scatterplot 
+ggplot(counts_df, aes(x = IL6, y = IL8)) +
+  geom_point() +
+  labs(x = "IL6 counts", y = "IL8 counts", title = "Scatterplot of IL6 vs IL8 counts_EP") +
+  annotate("text", x = min(counts_df$IL6), y = max(counts_df$IL8), 
+           label = paste("Pearson Correlation:", round(correlation, 2)), 
+           hjust = -1, vjust = 1, color = "black", size = 6) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "scatterplot_IL6IL8_EP.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+```
+#IGFBP3 vs TP53
+```{r}
+# Extract counts for IGFBP3 and TP53 from Seurat object - DS
+IGFBP3_counts <- filtered_seurat@assays$RNA@counts["IGFBP3", ]
+TP53_counts <- filtered_seurat@assays$RNA@counts["TP53", ]
+
+# Combine counts into a data frame
+counts_df <- data.frame(IGFBP3 = IGFBP3_counts, TP53 = TP53_counts)
+
+# Print the first few rows of the data frame
+print(head(counts_df))
+
+# Create scatterplot
+ggplot(counts_df, aes(x = IGFBP3, y = TP53)) +
+  geom_point() +
+  labs(x = "IGFBP3 counts", y = "TP53 counts", title = "Scatterplot of IGFBP3 vs TP53 counts_DS")
+
+# Compute the Pearson correlation coefficient
+correlation <- cor(counts_df$IGFBP3, counts_df$TP53)
+print(correlation)
+
+# Create scatterplot 
+ggplot(counts_df, aes(x = IGFBP3, y = TP53)) +
+  geom_point() +
+  labs(x = "IGFBP3 counts", y = "TP53 counts", title = "Scatterplot of IGFBP3 vs TP53 counts_DS") +
+  annotate("text", x = min(counts_df$IGFBP3), y = max(counts_df$TP53), 
+           label = paste("Pearson Correlation:", round(correlation, 2)), 
+           hjust = -1, vjust = 1, color = "black", size = 6) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "scatterplot_IGFBP3TP53_DS.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+
+# Extract counts for IGFBP3 and TP53 from Seurat object - EP
+IGFBP3_counts <- filtered_seurat_EP@assays$RNA@counts["IGFBP3", ]
+TP53_counts <- filtered_seurat_EP@assays$RNA@counts["TP53", ]
+
+# Combine counts into a data frame
+counts_df <- data.frame(IGFBP3 = IGFBP3_counts, TP53 = TP53_counts)
+
+# Print the first few rows of the data frame
+print(head(counts_df))
+
+# Create scatterplot
+ggplot(counts_df, aes(x = IGFBP3, y = TP53)) +
+  geom_point() +
+  labs(x = "IGFBP3 counts", y = "TP53 counts", title = "Scatterplot of IGFBP3 vs TP53 counts_EP")
+
+# Compute the Pearson correlation coefficient
+correlation <- cor(counts_df$IGFBP3, counts_df$TP53)
+print(correlation)
+
+# Create scatterplot 
+ggplot(counts_df, aes(x = IGFBP3, y = TP53)) +
+  geom_point() +
+  labs(x = "IGFBP3 counts", y = "TP53 counts", title = "Scatterplot of IGFBP3 vs TP53 counts_EP") +
+  annotate("text", x = min(counts_df$IGFBP3), y = max(counts_df$TP53), 
+           label = paste("Pearson Correlation:", round(correlation, 2)), 
+           hjust = -1, vjust = 1, color = "black", size = 6) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "scatterplot_IGFBP3TP53_EP.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibSole_Integrated"
+  )
+```

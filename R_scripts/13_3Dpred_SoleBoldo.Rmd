@@ -8,14 +8,14 @@ output: html_document
 ##Testing ScPred 3D ML models on Sole-Boldo datasets
 ```{r}
 #MDA radial model
-query <- NormalizeData(Sole_fibs2)
-query <- scPredict(query, hdf_mda3D)
+querysole3D <- NormalizeData(Sole_fibs2)
+querysole3D <- scPredict(querysole3D, hdf_mda3D)
 
-DimPlot(query, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123)  +
+DimPlot(querysole3D, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123)  +
   custom_theme(base_size=20)
 
 
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4"))  +
+DimPlot(querysole3D, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4"))  +
   custom_theme(base_size=20)
 
 ggsave(
@@ -29,7 +29,7 @@ ggsave(
 ## Investigating the percentage of DS predicted cells per age
 
 ```{r}
-query2 <- query@meta.data
+query2 <- querysole3D@meta.data
 table <- table(query2[, c("age", "scpred_prediction")])
 table
 mat <- as.data.frame.matrix(table)
@@ -42,6 +42,8 @@ percentages
 as.matrix(percentages)
 percentages <- percentages[ order(row.names(percentages)), ]
 v <- rownames(percentages)
+
+print(percentages)
 
 barplot_data <- percentages$DS3D
 barplot_names <- v

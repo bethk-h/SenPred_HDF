@@ -7,7 +7,6 @@ output: html_document
 
 ```{r}
 Sole <- readRDS("../Inputfiles/Sole-Boldo_SeuratObject_New-AD21-Clusters.rds")
-Sole$SoleBoldo_name
 Idents(object = Sole) <- Sole$SoleBoldo_name
 
 #Extracting just the fibroblasts
@@ -187,6 +186,9 @@ ggsave(
   path = "../Output/SoleBoldo"
   )
 
+#Normalise - log10normalisation
+Sole_fibs2 <- NormalizeData(Sole_fibs2)
+
 ```
 
 ## Finding top variable genes within the dataset
@@ -346,6 +348,8 @@ v <- perc$age
 #convert 'variable' to factor and specify level order
 perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', 'DS2D'))
 
+print(perc)
+
 #create stacked bar chart
 ggplot(perc, aes(x=age, y=value, fill=variable)) + 
     geom_bar(position='stack', stat='identity') +
@@ -362,15 +366,15 @@ ggsave("barplot_stacked_2Dpred_age.tiff",
 ## Testing EP/ES/DS model
 ```{r}
 #MDA radial model
-query <- NormalizeData(Sole_fibs2)
-query <- scPredict(query, HDF_Chan_combined_scPred)
+querysole <- NormalizeData(Sole_fibs2)
+querysole <- scPredict(querysole, HDF_Chan_combined_scPred)
 
-DimPlot(query, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123) +
+DimPlot(querysole, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123) +
   custom_theme(base_size=20)
       
 
 
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "#228c22", "antiquewhite4")) +
+DimPlot(querysole, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "#228c22", "antiquewhite4")) +
   custom_theme(base_size=20)
 
 
@@ -383,7 +387,7 @@ ggsave(
   )
 
 #Colour UMAP by age  E2C1F3 Yellow: F5E45F Teal: 00C69E Orange: FD7A39 Blue: 07BDFF Pink: FE51B0
-DimPlot(query, group.by = "age", label = FALSE, repel = TRUE, seed=123, cols = c("#cc889d", "#f5c5a0", "#7dae9b", "#8abfe8", "#5c7998", "#7b78b8")) +
+DimPlot(querysole, group.by = "age", label = FALSE, repel = TRUE, seed=123, cols = c("#cc889d", "#f5c5a0", "#7dae9b", "#8abfe8", "#5c7998", "#7b78b8")) +
   custom_theme(base_size=20)
 
 ggsave(
@@ -397,7 +401,7 @@ ggsave(
 ## Investigating the percentage of DS predicted cells per age
 
 ```{r}
-query2 <- query@meta.data
+query2 <- querysole@meta.data
 table <- table(query2[, c("age", "scpred_prediction")])
 table
 mat <- as.data.frame.matrix(table)
@@ -418,6 +422,7 @@ v <- perc$age
 #convert 'variable' to factor and specify level order
 perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', 'DS2D'))
 
+print(perc)
 #create stacked bar chart
 ggplot(perc, aes(x=age, y=value, fill=variable)) + 
     geom_bar(position='stack', stat='identity') +

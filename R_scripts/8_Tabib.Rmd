@@ -185,6 +185,7 @@ ggsave(
   path = "../Output/Tabib"
   )
 
+Tabib_fibs2 <- NormalizeData(Tabib_fibs2)
 ```
 
 ## Finding top variable genes within the dataset
@@ -321,13 +322,13 @@ ggsave(
 ## Testing EP/ES/DS model
 ```{r}
 #MDA radial model
-query <- NormalizeData(Tabib_fibs2)
-query <- scPredict(query, HDF_Chan_combined_scPred)
+querytabib <- NormalizeData(Tabib_fibs2)
+querytabib <- scPredict(querytabib, HDF_Chan_combined_scPred)
 
-DimPlot(query, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123) + 
+DimPlot(querytabib, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123) + 
   custom_theme(base_size=20)
       
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "#228c22", "antiquewhite4")) + 
+DimPlot(querytabib, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "#228c22", "antiquewhite4")) + 
   custom_theme(base_size=20)
 
 ggsave(
@@ -338,7 +339,7 @@ ggsave(
   )
 
 #Colour UMAP by age
-DimPlot(query, group.by = "age", label = FALSE, repel = TRUE, seed=123, cols = c("#cc889d", "#f5c5a0", "#7dae9b", "#8abfe8", "#5c7998", "#7b78b8")) + 
+DimPlot(querytabib, group.by = "age", label = FALSE, repel = TRUE, seed=123, cols = c("#cc889d", "#f5c5a0", "#7dae9b", "#8abfe8", "#5c7998", "#7b78b8")) + 
   custom_theme(base_size=20)
 
 ggsave(
@@ -352,7 +353,7 @@ ggsave(
 ## Investigating the percentage of DS predicted cells per age
 
 ```{r}
-query2 <- query@meta.data
+query2 <- querytabib@meta.data
 table <- table(query2[, c("age", "scpred_prediction")])
 table
 mat <- as.data.frame.matrix(table)
@@ -397,6 +398,7 @@ df <- tibble::rownames_to_column(percentages, "age")
 perc <- melt(df)
 v <- perc$age
 
+print (perc)
 #convert 'variable' to factor and specify level order
 perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', 'DS2D'))
 
