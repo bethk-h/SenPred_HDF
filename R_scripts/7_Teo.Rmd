@@ -226,7 +226,7 @@ Teo_seurat2 <- FindVariableFeatures(Teo_seurat2, selection.method ="vst", nfeatu
 
 #Identify the 10 most highly variable genes
 top10 <- head(VariableFeatures(Teo_seurat2), 10)
-top10
+print(top10)
 
 top2000 <- head(VariableFeatures(Teo_seurat2), 2000)
 top2000
@@ -242,17 +242,27 @@ plot2
 
 
 ```{r}
+#Scaling for dimensionality reduction
 all.genes <- rownames(Teo_seurat2)
 Teo_seurat2 <- ScaleData(Teo_seurat2, features = all.genes)
 
 #Performing a PCA
 Teo_seurat2 <- RunPCA(Teo_seurat2, features=VariableFeatures(object = Teo_seurat2))
 
-DimPlot(Teo_seurat2, reduction = "pca")
-tiff("../Output/Teo/PCA.tiff")
-dev.off()
+PCA_Teo <- DimPlot(Teo_seurat2, reduction = "pca")
+PCA_Teo
+
+ggsave(
+  "Teo_PCA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Teo_QC"
+  )
+
+
 ```
 ```{r}
+#Heatmaps of genes contributing to top PCs
 DimHeatmap(Teo_seurat2, dims=1, cells=500, balanced=TRUE)
 DimHeatmap(Teo_seurat2, dims=1:15, cells=500, balanced=TRUE)
 ElbowPlot(Teo_seurat2)
@@ -261,7 +271,7 @@ ElbowPlot(Teo_seurat2)
 Teo_seurat2 <- FindNeighbors(Teo_seurat2, dims =1:10)
 
 #group cells using findclusters function
-Teo_seurat2 <- FindClusters(Teo_seurat2, resolution = 0.5)
+Teo_seurat2 <- FindClusters(Teo_seurat2, resolution = 0.4)
 
 #Look at cluster ID's of first 5 cells
 head(Idents(Teo_seurat2), 5)
@@ -270,12 +280,27 @@ head(Idents(Teo_seurat2), 5)
 #Running a UMAP
 Teo_seurat2 <- RunUMAP(Teo_seurat2, dims=1:10)
 
-DimPlot(Teo_seurat2, reduction = "umap")
-tiff("../Output/Teo/UMAP_clusters.tiff",width=3300,height=2400,res=400)
+plot <- DimPlot(Teo_seurat2, reduction = "umap", seed = 123) +
+  custom_theme(base_size=20)
+plot
+ggsave(
+  "UMAP_clusters_all.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Teo"
+  )
+```
 
-
-DimPlot(Teo_seurat2, reduction = "umap",group.by = "Condition2.x")
-tiff("../Output/Teo/UMAP_samples.tiff",width=3300,height=2400,res=400)
+```{r}
+plot2 <- DimPlot(Teo_seurat2, reduction = "umap",group.by = "Condition2.x", seed = 123)+
+  custom_theme(base_size=20)
+plot2
+ggsave(
+  "UMAP_clusters_samples.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Teo"
+  )
 ```
 
 ##Running SenPred 2D EP/ES/DS on Teo data
@@ -284,111 +309,30 @@ query <- NormalizeData(Teo_seurat2)
 query <- scPredict(query, HDF_Chan_combined_scPred)
 
 
-reference <- Teo_seurat2 %>% 
-  NormalizeData() %>% 
-  FindVariableFeatures() %>% 
-  ScaleData() %>% 
-  RunPCA() %>% 
-  RunUMAP(dims = 1:30)
-
 DimPlot(query, group.by = "Condition2.x", label = FALSE, repel = TRUE, label.size=2)
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE)
+pred_plot <- DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed = 123) +
+  custom_theme(base_size=20)
 
-query <- RunUMAP(query, reduction = "scpred", dims = 1:30)
-DimPlot(query, group.by = "scpred_prediction", label = TRUE, repel = TRUE,  label.size = 4)
-DimPlot(query, group.by = "Condition2.x", label = TRUE, repel = TRUE,  label.size = 2)
-FeaturePlot(query, c("scpred_DS3D", "scpred_EP3D", "unassigned"))
+pred_plot
 
 
-
-```
-
-```{r}
-# Subset the Seurat object based on scpred_prediction
-filtered_seurat <- subset(Teo_seurat2, subset = Condition2.x == "GFP")
-
-# Extract gene counts for filtered cells
-gene_counts <- filtered_seurat@assays$RNA@counts
-
-# Define gene list - TNF is missing
-gene_list <- c("CDKN1A", "CDKN2A", "IGFBP3", "SERPINE1", "CXCL12")
-
-# Check if gene names in gene_list are present in row names (genes)
-missing_genes <- gene_list[!gene_list %in% rownames(gene_counts)]
-if (length(missing_genes) > 0) {
-  stop(paste("Genes missing in gene counts:", paste(missing_genes, collapse = ", ")))
-}
-
-# Filter gene counts based on the gene list
-gene_counts <- gene_counts[gene_list, ]
-gene_counts <- as.matrix(gene_counts)
-# Transpose gene counts matrix
-gene_counts_transposed <- t(gene_counts)
-gene_counts_transposed <- as.matrix(gene_counts_transposed)
-
-# Calculate correlation matrix
-correlation_matrix <- cor(gene_counts_transposed)
-
-# Print correlation matrix
-print(correlation_matrix)
-
-# Define breaks and color palette
-breaks <- unique(c(seq(-1,-0.0001,length=50),seq(-0.00001,0.01,length=50), seq(0.011,1,length=50)))
-my_palette <- colorRampPalette(c("blue","white", "white", "red"))(length(breaks)-1)
-
-library("gplots")
-# Assume combined3 is the correlation matrix
-heatmap <- heatmap.2(correlation_matrix, 
-                     col = my_palette, 
-                     breaks = breaks, 
-                     key = TRUE, 
-                     trace = "none", 
-                     main = "Marker Correlation_Teo_RIS", 
-                     key.title = "Correlation",   
-                     cexRow = 0.6, 
-                     cexCol = 0.6,    
-                     distfun = function(x) dist(x, method = "euclidean"),
-                     hclust = function(x) hclust(x, method = "ward.D2"), 
-                     symkey = FALSE, 
-                     Rowv = FALSE,
-                     Colv = FALSE,
-                     density.info = c("none"))
-
+ggsave(
+  "UMAP_clusters_scpred2d_EPESDS.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Teo"
+  )
 
 ```
-
-```{r}
-query <- NormalizeData(Teo_seurat2)
-query <- scPredict(query, HDF_Chan_combined_scPred)
-
-
-reference <- Teo_seurat2 %>% 
-  NormalizeData() %>% 
-  FindVariableFeatures() %>% 
-  ScaleData() %>% 
-  RunPCA() %>% 
-  RunUMAP(dims = 1:30)
-
-DimPlot(query, group.by = "Condition2.x", label = FALSE, repel = TRUE, label.size=2)
-DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE)
-
-query <- RunUMAP(query, reduction = "scpred", dims = 1:30)
-DimPlot(query, group.by = "scpred_prediction", label = TRUE, repel = TRUE,  label.size = 4)
-DimPlot(query, group.by = "Condition2.x", label = TRUE, repel = TRUE,  label.size = 2)
-FeaturePlot(query, c("scpred_DS3D", "scpred_EP3D", "unassigned"))
-
-
-
-```
-
-
+Extracting percentage predictions for Teo data
 ```{r}
 query2 <- query@meta.data
 table <- table(query2[, c("Condition2.x", "scpred_prediction")])
 table
 mat <- as.data.frame.matrix(table)
-mat
+print(mat)
 
+## Coverting numbers per condition into percentages
 percentages <- (mat/rowSums(mat))*100
 percentages
 percentages <- na.omit(percentages)
@@ -397,325 +341,31 @@ as.matrix(percentages)
 percentages <- percentages[ order(row.names(percentages)), ]
 v <- rownames(percentages)
 
-percentages
+print(percentages)
+
 df <- tibble::rownames_to_column(percentages, "Condition")
 percentage2 <- melt(df)
 
-ggplot(percentage2, aes(x=Condition, y=value, fill=variable)) + 
+##Reordering variables
+percentage2$variable <- factor(percentage2$variable, levels = c("unassigned", "EP2D", "PDL50"))
+
+
+percplot <- ggplot(percentage2, aes(x=Condition, y=value, fill=variable)) + 
     geom_bar(position='stack', stat='identity') +
-  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22", "darkblue" )) 
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22")) +
+  custom_theme(base_size=20)
+
+percplot
+
+ggsave(
+  "barplot_scpred_percentages.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Teo"
+  )
 
 ```
-#Building machine learning models with Teo growing and RIS
-```{r}
-Teo_RIS_grow <- subset(Teo_seurat, Condition2.x == "RIS" | Condition2.x == "Growing")
-
-Teo_RIS_grow_filt <- subset(x=Teo_RIS_grow, 
-                            (nFeature_RNA >=500) &
-                            (nCount_RNA >= 1000))
-
-#Seperating into training and testing sets
-new_col <- 1:447
-
-Teo_RIS_grow_filt@meta.data <- cbind(Teo_RIS_grow_filt@meta.data, new_col)
-
-Teo_RIS_grow_filt@meta.data$new_col <- 1:nrow(Teo_RIS_grow_filt@meta.data)
-train <- Teo_RIS_grow_filt@meta.data %>% dplyr::sample_frac(.8)
-test  <- dplyr::anti_join(Teo_RIS_grow_filt@meta.data, train, by = 'new_col')
-
-test <- test$new_col
-train <- train$new_col
-
-Teo_RIS_grow_filt@meta.data$new_col[Teo_RIS_grow_filt@meta.data$new_col %in% test] <- "Test"
-Teo_RIS_grow_filt@meta.data$new_col[Teo_RIS_grow_filt@meta.data$new_col %in% train] <- "Train"
-
-obj_list <- SplitObject(Teo_RIS_grow_filt, split.by = "new_col")
-
-training <- obj_list$Train %>% 
-  NormalizeData() %>% 
-   FindVariableFeatures() %>% 
-  ScaleData() %>% 
-  RunPCA() %>% 
-  RunUMAP(dims = 1:10)
-
-DimPlot(training, group.by = "Condition2.x", label = FALSE, repel = TRUE)
-
-testing <- obj_list$Test%>%
-  NormalizeData() %>%
-  FindVariableFeatures() %>% 
-  ScaleData() %>% 
-  RunPCA() %>% 
-  RunUMAP(dims = 1:10)
-
-DimPlot(testing, group.by = "Condition2.x", label = FALSE, repel=TRUE)
-
-
+### Session information
+```{r session_info_99}
+sessionInfo()
 ```
-```{r}
-#Using the training data set to create and evaluate different models - no PC filters
-Teo_scpred <- getFeatureSpace(training, "Condition2.x")
-
-
-#This model is the svm Radial model
-Teo_trained <- trainModel(Teo_scpred)
-get_probabilities(Teo_trained) %>% head()
-Teo_svmradial <- get_scpred(Teo_trained)
-Teo_svmradial
-
-```
-```{r}
-query <- NormalizeData(testing)
-query <- scPredict(query, Teo_svmradial, recompute_alignment = FALSE, threshold = 0.55)
-
-```
-
-```{r}
-query_df <- query@meta.data
-query_df <- query_df %>%
-  mutate(Status = case_when(query_df$Condition2.x=="RIS" & query_df$scpred_prediction=="RIS" ~ "RIST"))
-
-ds2dt <- nrow(query_df[!is.na(query_df$Status),])
-
-query_df <- query_df %>%
-  mutate(Status = case_when(query_df$Condition2.x=="RIS" & query_df$scpred_prediction=="Growing" ~ "GrowingF"))
-
-ep2df <- nrow(query_df[!is.na(query_df$Status),])
-
-query_df <- query_df %>%
-  mutate(Status = case_when(query_df$Condition2.x=="Growing" & query_df$scpred_prediction=="Growing" ~ "GrowingT"))
-
-ep2dt <- nrow(query_df[!is.na(query_df$Status),])
-
-
-query_df <- query_df %>%
-  mutate(Status = case_when(query_df$Condition2.x=="Growing" & query_df$scpred_prediction=="RIS" ~ "RISF"))
-
-ds2df <- nrow(query_df[!is.na(query_df$Status),])
-
-#Plotting into confusion matrix
-
-table <- matrix(c(ds2dt, ep2df, ds2df, ep2dt),ncol=2,byrow=TRUE)
-colnames(table) <- c("DS", "EP")
-rownames(table) <- c("DS", "EP")
-table <- as.table(table)
-table
-
-```
-
-```{r}
-#Can OIS predict 2D data?
-hdfdeb_filt_2D <- subset(hdfbeth_filt, Sample == "DS2D" | Sample == "EP2D")
-query2D <- NormalizeData(hdfdeb_filt_2D)
-query2D <- scPredict(query2D, Teo_svmradial)
-
-DimHeatmap(query2D, dims=1, cells=500, balanced=TRUE)
-DimHeatmap(query2D, dims=1:15, cells=500, balanced=TRUE)
-ElbowPlot(query2D)
-
-#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
-query2D <- FindNeighbors(query2D, dims =1:10)
-
-#group cells using findclusters function
-query2D <- FindClusters(query2D, resolution = 0.5)
-```
-
-```{r}
-#Running a UMAP
-hdfdeb_filt_2D <- RunUMAP(query2D, dims=1:10)
-
-DimPlot(hdfdeb_filt_2D, reduction = "umap")
-tiff("../Results/UMAP_clusters_2D.tiff",width=3300,height=2400,res=400)
-DimPlot(hdfdeb_filt_2D, reduction = "umap")
-
-
-DimPlot(hdfdeb_filt_2D, reduction = "umap",group.by = "Sample")
-tiff("../Results/UMAP_samples_2D.tiff",width=3300,height=2400,res=400)
-DimPlot(hdfdeb_filt_2D, reduction = "umap",group.by = "Sample")
-
-DimPlot(query2D, reduction = "umap",group.by = "scpred_prediction")
-tiff("../Results/UMAP_phase_2D.tiff",width=3300,height=2400,res=400)
-DimPlot(hdfdeb_filt_2D, reduction = "umap",group.by = "Phase")
-
-DimPlot(hdfdeb_filt_2D, reduction = "umap", group.by = "scpred_prediction")
-```
-
-```{r}
-query_df2D <- query2D@meta.data
-
-query_df2D <- query_df2D %>%
-  mutate(Status = case_when(query_df2D$Sample=="DS2D" & query_df2D$scpred_prediction=="RIS" ~ "RIST"))
-
-ds2dt <- nrow(query_df2D[!is.na(query_df2D$Status),])
-
-query_df2D <- query_df2D %>%
-  mutate(Status = case_when(query_df2D$Sample=="DS2D" & query_df2D$scpred_prediction=="Growing" ~ "GrowingF"))
-
-ep2df <- nrow(query_df2D[!is.na(query_df2D$Status),])
-
-query_df2D <- query_df2D %>%
-  mutate(Status = case_when(query_df2D$Sample=="EP2D" & query_df2D$scpred_prediction=="Growing" ~ "GrowingT"))
-
-ep2dt <- nrow(query_df2D[!is.na(query_df2D$Status),])
-
-
-query_df2D <- query_df2D %>%
-  mutate(Status = case_when(query_df2D$Sample=="EP3D" & query_df2D$scpred_prediction=="RIS" ~ "RISF"))
-
-ds2df <- nrow(query_df2D[!is.na(query_df2D$Status),])
-
-#Plotting into confusion matrix
-
-table <- matrix(c(ds2dt, ep2df, ds2df, ep2dt),ncol=2,byrow=TRUE)
-colnames(table) <- c("DS", "EP")
-rownames(table) <- c("DS", "EP")
-table <- as.table(table)
-table
-```
-
-
-#Can Teo OIS model predict my 3D data?
-```{r}
-hdfdeb_filt_3D <- subset(hdfbeth_filt, Sample == "DS3D" | Sample == "EP3D")
-query3D <- NormalizeData(hdfdeb_filt_3D)
-query3D <- scPredict(query3D, Teo_svmradial)
-
-DimHeatmap(query3D, dims=1, cells=500, balanced=TRUE)
-DimHeatmap(query3D, dims=1:15, cells=500, balanced=TRUE)
-ElbowPlot(query3D)
-
-#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
-query3D <- FindNeighbors(query3D, dims =1:10)
-
-#group cells using findclusters function
-query3D <- FindClusters(query3D, resolution = 0.5)
-```
-
-```{r}
-#Running a UMAP
-hdfdeb_filt_3D <- RunUMAP(query3D, dims=1:10)
-
-DimPlot(hdfdeb_filt_3D, reduction = "umap")
-tiff("../Results/UMAP_clusters_2D.tiff",width=3300,height=2400,res=400)
-DimPlot(hdfdeb_filt_2D, reduction = "umap")
-
-
-DimPlot(hdfdeb_filt_3D, reduction = "umap",group.by = "Sample")
-tiff("../Results/UMAP_samples_2D.tiff",width=3300,height=2400,res=400)
-DimPlot(hdfdeb_filt_2D, reduction = "umap",group.by = "Sample")
-
-DimPlot(hdfdeb_filt_3D, reduction = "umap",group.by = "scpred_prediction")
-tiff("../Results/UMAP_phase_2D.tiff",width=3300,height=2400,res=400)
-DimPlot(hdfdeb_filt_2D, reduction = "umap",group.by = "Phase")
-
-DimPlot(hdfdeb_filt_2D, reduction = "umap", group.by = "scpred_prediction")
-```
-
-```{r}
-#Combining Teo and Deb's data using seurat integration workflow
-
-# normalise and find variable features seperately
-
-norm_beth <- NormalizeData(hdfbeth_filt)
-norm_beth <- FindVariableFeatures(norm_beth, selection.method = "vst", nfeatures = 2000)
-norm_beth <- subset(norm_beth, Sample == "DS2D" | Sample == "EP2D" | Sample == "Mix2D")
-
-norm_teo <- NormalizeData(Teo_seurat2)
-norm_teo <- FindVariableFeatures(norm_teo, selection.method = "vst", nfeatures = 2000)
-norm_teo@meta.data$Sample <- norm_teo@meta.data$Condition2.x
-norm_teo@meta.data$Sample[norm_teo@meta.data$Sample == 'Growing'] <- 'EP2D'
-
-
-# select features that are repeatedly variable across datasets for integration
-features <- SelectIntegrationFeatures(object.list = c(norm_beth, norm_teo))
-
-#Find integration anchors
-int.nchors <- FindIntegrationAnchors(object.list = c(norm_beth, norm_teo), anchor.features = features)
-
-# this command creates an 'integrated' data assay
-beth.teo.combined <- IntegrateData(anchorset = int.nchors)
-
-# specify that we will perform downstream analysis on the corrected data note that the
-# original unmodified data still resides in the 'RNA' assay
-DefaultAssay(beth.teo.combined) <- "integrated"
-```
-
-```{r}
-#Selecting highly variable features - high cell to cell variation
-beth.teo.combined <- FindVariableFeatures(beth.teo.combined, selection.method ="vst", nfeatures=2000)
-
-#Identify the 10 most highly variable genes
-top10 <- head(VariableFeatures(beth.teo.combined), 10)
-top10
-
-top2000 <- head(VariableFeatures(beth.teo.combined), 2000)
-top2000
-
-#Plot variable features without labels
-plot1 <- VariableFeaturePlot(beth.teo.combined)
-#Plot variable features with labels
-plot2 <- LabelPoints(plot=plot1, points = top10, repel=TRUE)
-plot1
-plot2
-```
-
-#Scaling the data before dimensionality reduction
-```{r}
-all.genes <- rownames(beth.teo.combined)
-beth.teo.combined <- ScaleData(beth.teo.combined, features = all.genes)
-
-#Performing a PCA
-beth.teo.combined <- RunPCA(beth.teo.combined, features=VariableFeatures(object = beth.teo.combined))
-
-DimPlot(beth.teo.combined, reduction = "pca")
-tiff("../Results/PCA.tiff")
-dev.off()
-
-
-```
-
-## PCA coloured by sample type
-```{r}
-
-DimPlot(beth.teo.combined, reduction = "pca", group.by = "Sample") 
-tiff("../Results/PCA_grouped.tiff")
-DimPlot(beth.teo.combined, reduction = "pca", group.by = "Sample") 
-
-#To determine which PCs to use down the line can use heatmap. Setting 'cells' to a number plots extreme cells on both ends.
-```
-
-
-
-
-```{r}
-DimHeatmap(beth.teo.combined, dims=1, cells=500, balanced=TRUE)
-DimHeatmap(beth.teo.combined, dims=1:15, cells=500, balanced=TRUE)
-ElbowPlot(beth.teo.combined)
-
-#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
-beth.teo.combined <- FindNeighbors(beth.teo.combined, dims =1:10)
-
-#group cells using findclusters function
-beth.teo.combined <- FindClusters(beth.teo.combined, resolution = 0.5)
-
-#Look at cluster ID's of first 5 cells
-head(Idents(beth.teo.combined), 5)
-```
-
-
-# Plot UMAP
-```{r}
-#Running a UMAP
-beth.teo.combined <- RunUMAP(beth.teo.combined, dims=1:10)
-
-DimPlot(beth.teo.combined, reduction = "umap")
-tiff("~/Documents/Deb_RNA_seq/Results/UMAP_clusters_All.tiff",width=3300,height=2400,res=400)
-DimPlot(beth.teo.combined, reduction = "umap")
-
-
-DimPlot(beth.teo.combined, reduction = "umap",group.by = "Sample")
-tiff("../Results/UMAP_samples.tiff",width=3300,height=2400,res=400)
-DimPlot(beth.teo.combined, reduction = "umap",group.by = "Sample")
-
-DimPlot(beth.teo.combined, reduction = "umap",group.by = "Phase")
-tiff("../Results/UMAP_phase.tiff",width=3300,height=2400,res=400)
-DimPlot(beth.teo.combined, reduction = "umap",group.by = "Phase")
