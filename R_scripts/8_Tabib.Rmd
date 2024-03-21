@@ -319,6 +319,49 @@ ggsave(
   path = "../Output/Tabib"
   )
 ```
+
+## Investigating the percentage of DS predicted cells per age
+
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("age", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+
+
+df <- tibble::rownames_to_column(percentages, "age")
+perc <- melt(df)
+v <- perc$age
+
+percentages_Sole2D <- perc
+write.csv(percentages_Sole2D, "../Output/Tabib/EPDS2D_tabibfibs.csv")
+#convert 'variable' to factor and specify level order
+perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', 'DS2D'))
+
+print(perc)
+
+#create stacked bar chart
+ggplot(perc, aes(x=age, y=value, fill=variable)) + 
+    geom_bar(position='stack', stat='identity') +
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "darkblue")) +
+  custom_theme(base_size=20)
+
+ggsave("barplot_stacked_2Dpred_age.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Tabib"
+  )
+
+```
+
 ## Testing EP/ES/DS model
 ```{r}
 #MDA radial model

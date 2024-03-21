@@ -1,0 +1,9 @@
+---
+title: "17_alldermal_celltypes"
+author: "BH"
+date: "2024-03-21"
+output: html_document
+---
+
+#Testing the 3D model in all cell types from the dermis (not just fibroblasts)
+

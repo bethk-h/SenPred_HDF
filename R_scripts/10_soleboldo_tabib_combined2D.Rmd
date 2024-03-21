@@ -37,7 +37,7 @@ head(transformed_seurat_list[[2]]$RNA, n = 5)  # Replace "RNA" with your assay n
 
 # Select integration features
 integ_features <- SelectIntegrationFeatures(object.list = transformed_seurat_list, 
-                                            nfeatures = 18000)
+                                            nfeatures = 2000)
 
 # Prepare for integration
 list <- PrepSCTIntegration(object.list = transformed_seurat_list, 
@@ -57,7 +57,7 @@ seurat_integrated <- IntegrateData(anchorset = integ_anchors,
 
 ```{r}
 #Selecting highly variable features - high cell to cell variation
-seurat_integrated <- FindVariableFeatures(seurat_integrated, selection.method ="vst", nfeatures=18000)
+seurat_integrated <- FindVariableFeatures(seurat_integrated, selection.method ="vst", nfeatures=2000)
 #Identify the 10 most highly variable genes
 top10 <- head(VariableFeatures(seurat_integrated), 10)
 top10

@@ -1,0 +1,237 @@
+---
+title: "Matrisome"
+author: "BH"
+date: "2024-02-07"
+output: html_document
+---
+## Matrisome genes were imported from the Matrisome project: https://sites.google.com/uic.edu/matrisome/home?authuser=0
+The genes imported were the NABA_MATRISOME human gene set. 
+
+```{r}
+matrisome <- read.csv ("../Inputfiles/matrisome.csv", header = FALSE)
+```
+
+```{r}
+#Extracting gene names from the matrisome list
+matrisome_genes <- matrisome$V1
+
+# Find common genes between 'matrisome_genes' and the gene names in the Seurat object
+common_genes <- intersect(rownames(hdfseurat_filt_2D), matrisome_genes)
+
+# Check if common genes were found
+if (length(common_genes) == 0) {
+  stop("None of the features in 'matrisome' are present in the Seurat object.")
+}
+
+# Subset the Seurat object to include only the common genes
+hdfseurat_filt_2D_matrisome <- hdfseurat_filt_2D@assays[["RNA"]]@counts
+df <- as.data.frame(hdfseurat_filt_2D_matrisome)
+
+filtered_df <- df[rownames(df) %in% common_genes, ]
+
+# Calculate row medians
+row_medians <- apply(filtered_df, 1, median)
+
+# Create a dataframe with only row medians
+median_df_2D <- data.frame("mediancounts_2D" = row_medians, row.names = rownames(filtered_df))
+
+
+print(median_df_2D)
+
+```
+
+
+```{r}
+matrisome_genes <- matrisome$V1
+
+# Find common genes between 'matrisome_genes' and the gene names in the Seurat object
+common_genes <- intersect(rownames(hdfseurat_filt_3D), matrisome_genes)
+
+# Check if common genes were found
+if (length(common_genes) == 0) {
+  stop("None of the features in 'matrisome' are present in the Seurat object.")
+}
+
+# Subset the Seurat object to include only the common genes
+hdfseurat_filt_3D_matrisome <- hdfseurat_filt_3D@assays[["RNA"]]@counts
+df <- as.data.frame(hdfseurat_filt_3D_matrisome)
+
+filtered_df <- df[rownames(df) %in% common_genes, ]
+
+# Calculate row medians
+row_medians <- apply(filtered_df, 1, median)
+
+# Create a dataframe with only row medians
+median_df_3D <- data.frame("mediancounts_3D" = row_medians, row.names = rownames(filtered_df))
+
+print(median_df_3D)
+
+```
+
+```{r}
+matrisome_genes <- matrisome$V1
+
+# Find common genes between 'matrisome_genes' and the gene names in the Seurat object
+common_genes <- intersect(rownames(Tabib_fibs2), matrisome_genes)
+
+# Check if common genes were found
+if (length(common_genes) == 0) {
+  stop("None of the features in 'matrisome' are present in the Seurat object.")
+}
+
+# Subset the Seurat object to include only the common genes
+Tabib_fibs2_matrisome <- Tabib_fibs2@assays[["RNA"]]@counts
+df <- as.data.frame(Tabib_fibs2_matrisome)
+
+filtered_df <- df[rownames(df) %in% common_genes, ]
+
+# Calculate row medians
+row_medians <- apply(filtered_df, 1, median)
+
+# Create a dataframe with only row medians
+median_df_tabib <- data.frame("mediancounts_Tabib" = row_medians, row.names = rownames(filtered_df))
+
+# Print or use median_df as needed
+print(median_df_tabib)
+
+```
+
+```{r}
+matrisome_genes <- matrisome$V1
+
+# Find common genes between 'matrisome_genes' and the gene names in the Seurat object
+common_genes <- intersect(rownames(Sole_fibs2), matrisome_genes)
+
+# Check if common genes were found
+if (length(common_genes) == 0) {
+  stop("None of the features in 'matrisome' are present in the Seurat object.")
+}
+
+# Subset the Seurat object to include only the common genes
+Sole_fibs2_matrisome <- Sole_fibs2@assays[["RNA"]]@counts
+df <- as.data.frame(Sole_fibs2_matrisome)
+
+filtered_df <- df[rownames(df) %in% common_genes, ]
+
+# Calculate row medians
+row_medians <- apply(filtered_df, 1, median)
+
+# Create a dataframe with only row medians
+median_df_sole <- data.frame("mediancounts_Sole" = row_medians, row.names = rownames(filtered_df))
+
+# Print or use median_df as needed
+print(median_df_sole)
+
+```
+
+```{r}
+
+# Check common row names
+common_row_names <- Reduce(intersect, list(rownames(median_df_2D), rownames(median_df_3D), rownames(median_df_sole), rownames(median_df_tabib)))
+
+# Print common row names
+print(common_row_names)
+
+# Subset the dataframes to include only the common row names and the column representing median counts
+median_df_2D_subset <- median_df_2D[common_row_names, "mediancounts_2D", drop = FALSE]
+median_df_3D_subset <- median_df_3D[common_row_names, "mediancounts_3D", drop = FALSE]
+median_df_sole_subset <- median_df_sole[common_row_names, "mediancounts_Sole", drop = FALSE]
+median_df_tabib_subset <- median_df_tabib[common_row_names, "mediancounts_Tabib", drop = FALSE]
+
+# Merge the dataframes using cbind
+merged_df <- cbind(median_df_2D_subset, median_df_3D_subset, median_df_sole_subset, median_df_tabib_subset)
+
+# Rename the row names column
+rownames(merged_df) <- common_row_names
+
+print(merged_df)
+
+
+```
+
+```{r}
+# Load required libraries
+library(gplots)
+
+# Extract numeric matrix from merged_df, excluding the 'genes' column
+numeric_matrix <- as.matrix(merged_df[, -which(names(merged_df) == "genes")])
+
+# Create breaks and define palette
+breaks <- unique(c(seq(-10,-0.011,length=100), seq(-0.011,0.01,length=100), seq(0.011,10,length=100)))
+my_palette <- colorRampPalette(c("red","white", "white", "blue"))(length(breaks)-1)
+
+# Create heatmap using heatmap.2 with adjusted x-axis label size
+heatmap.2(numeric_matrix, col=my_palette, breaks = breaks, key=TRUE, trace="none", main="Matrisome", key.title = 1, cexRow=0.1, cexCol=0.8, distfun = function(x) dist(x, method = "euclidean"), hclust = function(x) hclust(x, method = "ward.D2"), symkey = FALSE, density.info = "none", cex.axis = 5)
+
+
+```
+
+```{r}
+# Remove rows where all values are 0
+merged_df_nozero <- merged_df[rowSums(merged_df[, -which(names(merged_df) == "genes")]) != 0, ]
+
+# Load required libraries
+library(gplots)
+
+# Extract numeric matrix from merged_df, excluding the 'genes' column
+numeric_matrix <- as.matrix(merged_df_nozero[, -which(names(merged_df) == "genes")])
+
+# Create breaks and define palette
+breaks <- unique(c(seq(-0.011,0.01,length=100), seq(0.011,20,length=100)))
+my_palette <- colorRampPalette(c("white", "white", "blue"))(length(breaks)-1)
+
+# Create heatmap using heatmap.2 with adjusted x-axis label size
+heatmap.2(numeric_matrix, col=my_palette, breaks = breaks, key=TRUE, trace="none", main="Matrisome", key.title = "Gene count", cexRow=0.1, cexCol=0.5, distfun = function(x) dist(x, method = "euclidean"), hclust = function(x) hclust(x, method = "ward.D2"), symkey = FALSE, density.info = "none", cex.axis = 5)
+
+
+
+```
+
+
+```{r}
+# Load required libraries
+library(gplots)
+
+# Remove rows where all values are 0
+merged_df_nozero <- merged_df[rowSums(merged_df[, -which(names(merged_df) == "genes")]) != 0, ]
+
+# Extract numeric matrix from merged_df, excluding the 'genes' column
+numeric_matrix <- as.matrix(merged_df_nozero[, -which(names(merged_df_nozero) == "genes")])
+
+# Create breaks and define palette
+breaks <- seq(-0.011, 0.011, length.out = 100)
+my_palette <- colorRampPalette(c("white", "blue"))(length(breaks) - 1)
+
+# Create heatmap using heatmap.2 with adjusted parameters
+heatmap.2(numeric_matrix,
+          col = my_palette,
+          breaks = breaks,
+          key = TRUE,
+          trace = "none",
+          main = "Matrisome",
+          key.title = "Gene count",
+          cexRow = 0.5,  # Adjust row label size
+          cexCol = 0.8,  # Adjust column label size
+          distfun = function(x) dist(x, method = "euclidean"),
+          hclust = function(x) hclust(x, method = "ward.D2"),
+          symkey = FALSE,
+          density.info = "none",
+          cex.axis = 1.2,  # Adjust axis label size
+          margins = c(10, 10),  # Adjust margins for dendrogram
+          dendrogram = "column"  # Show column dendrogram
+) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "Matrisome_all.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Matrisome"
+  )
+
+```
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```

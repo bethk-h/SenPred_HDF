@@ -45,6 +45,9 @@ v <- rownames(percentages)
 
 print(percentages)
 
+percentages_solefibs <- percentages
+write.csv(percentages_solefibs3D, "../Output/SoleBoldo/EPDS3D_solefibs.csv")
+
 barplot_data <- percentages$DS3D
 barplot_names <- v
 

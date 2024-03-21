@@ -1,6 +1,0 @@
----
-title: "15_Ganier"
-author: "BH"
-date: "2024-03-21"
-output: html_document
----
