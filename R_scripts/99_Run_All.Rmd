@@ -17,7 +17,7 @@ library(rmarkdown)
 
 ```{r Run_all, include=FALSE}
 files_in_r_to_run <- 
-  c("1_HDF_data.Rmd","2_HDF_filtering_normalisation.Rmd", "3_HDF_2DCells.Rmd", "4_ScPred_2D.Rmd", "5_ScPred2d_Chan.Rmd", "6_ScPred2D_Chan_EPESDS.Rmd", "7_Tabib.Rmd", "8_soleboldo.Rmd", "9_ScPred_3D.Rmd", "10_3Dpred_Tabib.Rmd", "11_3Dpred_SoleBoldo.Rmd")
+  c("1_HDF_data.Rmd","2_HDF_filtering_normalisation.Rmd", "3_HDF_2DCells.Rmd", "4_ScPred_2D.Rmd", "5_ScPred2d_Chan.Rmd", "6_ScPred2D_Chan_EPESDS.Rmd", "7_Teo.Rmd", "8_Tabib.Rmd", "9_soleboldo.Rmd", "10_soleboldo_tabib_combined2D.rmd", "11_ScPred_3D.Rmd", "12_3Dpred_Tabib.Rmd", "13_3Dpred_SoleBoldo.Rmd", "14_soleboldo_tabib_combined3D.Rmd", "15_matrisome.Rmd", "16_Ganier.Rmd", "17_alldermal_celltypes.Rmd", "18_lungs.Rmd")
 
 for(i1 in 1:length(files_in_r_to_run)){
   

@@ -152,8 +152,8 @@ DimPlot(seurat_integrated_3D, reduction = "umap",group.by = "age_group", seed=12
 # Subset the Seurat object based on scpred_prediction
 filtered_seurat <- subset(seurat_integrated_3D, subset = scpred_prediction == "DS3D")
 
-# Extract gene counts for filtered cells
-gene_counts <- filtered_seurat@assays$RNA@counts
+# Extract normalised gene counts for filtered cells
+gene_counts <- filtered_seurat@assays$RNA@data
 
 # Define gene list 
 gene_list <- c("CDKN1A", "CDKN2A", "IGFBP3", "SERPINE1", "IGF1", "CXCL12", "IL6", "IL8", "MMP3", "TP53", "IL1B")
@@ -217,7 +217,7 @@ ggsave(
 filtered_seurat_EP <- subset(seurat_integrated_3D, subset = scpred_prediction == "EP3D")
 
 # Extract gene counts for filtered cells
-gene_counts <- filtered_seurat_EP@assays$RNA@counts
+gene_counts <- filtered_seurat_EP@assays$RNA@data
 
 # Define gene list 
 gene_list <- c("CDKN1A", "CDKN2A", "IGFBP3", "SERPINE1", "IGF1", "CXCL12", "IL6", "IL8", "MMP3", "TP53", "IL1B")
@@ -276,8 +276,8 @@ ggsave(
 #CDKN1A vs CDKN2A
 ```{r}
 # Extract counts for CDKN1A and CDKN2A from Seurat object - DS only
-CDKN1A_counts <- filtered_seurat@assays$RNA@counts["CDKN1A", ]
-CDKN2A_counts <- filtered_seurat@assays$RNA@counts["CDKN2A", ]
+CDKN1A_counts <- filtered_seurat@assays$RNA@data["CDKN1A", ]
+CDKN2A_counts <- filtered_seurat@assays$RNA@data["CDKN2A", ]
 
 # Combine counts into a data frame
 counts_df <- data.frame(CDKN1A = CDKN1A_counts, CDKN2A = CDKN2A_counts)
@@ -315,8 +315,8 @@ ggsave(
 filtered_seurat_EP <- subset(seurat_integrated_3D, subset = scpred_prediction == "EP3D")
 
 # Extract counts for CDKN1A and CDKN2A from Seurat object - DS only
-CDKN1A_counts <- filtered_seurat_EP@assays$RNA@counts["CDKN1A", ]
-CDKN2A_counts <- filtered_seurat_EP@assays$RNA@counts["CDKN2A", ]
+CDKN1A_counts <- filtered_seurat_EP@assays$RNA@data["CDKN1A", ]
+CDKN2A_counts <- filtered_seurat_EP@assays$RNA@data["CDKN2A", ]
 
 # Combine counts into a data frame
 counts_df <- data.frame(CDKN1A = CDKN1A_counts, CDKN2A = CDKN2A_counts)
@@ -355,8 +355,8 @@ ggsave(
 #IL6 vs IL8
 ```{r}
 # Extract counts for IL6 and IL8 from Seurat object - DS
-IL6_counts <- filtered_seurat@assays$RNA@counts["IL6", ]
-IL8_counts <- filtered_seurat@assays$RNA@counts["IL8", ]
+IL6_counts <- filtered_seurat@assays$RNA@data["IL6", ]
+IL8_counts <- filtered_seurat@assays$RNA@data["IL8", ]
 
 # Combine counts into a data frame
 counts_df <- data.frame(IL6 = IL6_counts, IL8 = IL8_counts)
@@ -390,8 +390,8 @@ ggsave(
   )
 
 # Extract counts for IL6 and IL8 from Seurat object - EP
-IL6_counts <- filtered_seurat_EP@assays$RNA@counts["IL6", ]
-IL8_counts <- filtered_seurat_EP@assays$RNA@counts["IL8", ]
+IL6_counts <- filtered_seurat_EP@assays$RNA@data["IL6", ]
+IL8_counts <- filtered_seurat_EP@assays$RNA@data["IL8", ]
 
 # Combine counts into a data frame
 counts_df <- data.frame(IL6 = IL6_counts, IL8 = IL8_counts)
@@ -427,8 +427,8 @@ ggsave(
 #IGFBP3 vs TP53
 ```{r}
 # Extract counts for IGFBP3 and TP53 from Seurat object - DS
-IGFBP3_counts <- filtered_seurat@assays$RNA@counts["IGFBP3", ]
-TP53_counts <- filtered_seurat@assays$RNA@counts["TP53", ]
+IGFBP3_counts <- filtered_seurat@assays$RNA@data["IGFBP3", ]
+TP53_counts <- filtered_seurat@assays$RNA@data["TP53", ]
 
 # Combine counts into a data frame
 counts_df <- data.frame(IGFBP3 = IGFBP3_counts, TP53 = TP53_counts)
@@ -462,8 +462,8 @@ ggsave(
   )
 
 # Extract counts for IGFBP3 and TP53 from Seurat object - EP
-IGFBP3_counts <- filtered_seurat_EP@assays$RNA@counts["IGFBP3", ]
-TP53_counts <- filtered_seurat_EP@assays$RNA@counts["TP53", ]
+IGFBP3_counts <- filtered_seurat_EP@assays$RNA@data["IGFBP3", ]
+TP53_counts <- filtered_seurat_EP@assays$RNA@data["TP53", ]
 
 # Combine counts into a data frame
 counts_df <- data.frame(IGFBP3 = IGFBP3_counts, TP53 = TP53_counts)

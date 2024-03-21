@@ -7,3 +7,885 @@ output: html_document
 
 #Testing the 3D model in all cell types from the dermis (not just fibroblasts)
 
+##Tabib 
+```{r}
+Tabib <- readRDS("../Inputfiles/Tabib_SeuratObject_AD23-Clusters (1).rds")
+
+```
+## Applying same QC metrics as my data to test for outliers. 
+nCount_RNA > 1000
+nFeature_RNA > 400
+percent.mt <= 12
+
+
+```{r}
+#Adding mitochondrial percentage and number of genes per UMI
+Tabib$log10GenesPerUMI <- log10(Tabib$nFeature_RNA) / log10(Tabib$nCount_RNA)
+
+Tabib[["percent.mt"]] <- PercentageFeatureSet(Tabib, pattern = "^MT-")
+
+#Visualise the number of cells per sample
+Tabib@meta.data %>% 
+  	ggplot(aes(x=Tabib_name, fill=Tabib_name)) + 
+  	geom_bar() +
+  	theme_classic() +
+  	theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	ggtitle("NCells")
+
+#Save plot
+ggsave(
+  "NumbersPerSample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+
+```
+
+## Visualising the number of UMIs per cell (nCount_RNA)
+
+```{r}
+#Number of UMIs (transcripts) per cell
+Tabib@meta.data %>% 
+  	ggplot(aes(color=Tabib_name, x=nCount_RNA, fill= Tabib_name)) + 
+  	geom_density(alpha = 0.2) + 
+  	scale_x_log10() + 
+  	theme_classic() +
+  	ylab("Cell density") +
+  	geom_vline(xintercept = 1000)
+
+#Save plot
+ggsave(
+  "UMIspercell.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+
+
+```
+
+## Visualising number of genes per cell (nFeature_RNA)
+```{r}
+# Visualize the distribution of genes detected per cell via histogram
+Tabib@meta.data %>% 
+  	ggplot(aes(color=Tabib_name, x=nFeature_RNA, fill= Tabib_name)) + 
+  	geom_density(alpha = 0.2) + 
+  	theme_classic() +
+  	scale_x_log10() + 
+  	geom_vline(xintercept = c(400))
+
+#Save plot
+ggsave(
+  "hist_featureRNA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+
+# Visualize the distribution of genes detected per cell via boxplot
+Tabib@meta.data %>% 
+  	ggplot(aes(x=Tabib_name, y=log10(nFeature_RNA), fill=Tabib_name)) + 
+  	geom_boxplot() + 
+  	theme_classic() +
+  	theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	ggtitle("NCells vs NGenes")
+
+#Save plot
+ggsave(
+  "boxplot_featureRNA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+```
+
+## Combining number of genes, UMIs and mitochondrial percentage, to show thresholding boundaries
+```{r}
+Tabib@meta.data %>% 
+  	ggplot(aes(x=nCount_RNA, y=nFeature_RNA, color=percent.mt)) + 
+  	geom_point() + 
+	scale_colour_gradient(low = "gray90", high = "black") +
+  	stat_smooth(method=lm) +
+  	scale_x_log10() + 
+  	scale_y_log10() + 
+  	theme_classic() +
+  	geom_vline(xintercept = 1000) +
+  	geom_hline(yintercept = 400) +
+  	facet_wrap(~Tabib_name)
+
+#Save plot
+ggsave(
+  "threshold_feature_count_mito.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+```
+
+## Mitochondrial gene expression per cell
+
+```{r}
+# Visualize the distribution of mitochondrial gene expression detected per cell
+Tabib@meta.data %>% 
+  	ggplot(aes(color=Tabib_name, x=percent.mt, fill=Tabib_name)) + 
+  	geom_density(alpha = 0.2) + 
+  	scale_x_log10() + 
+  	theme_classic() +
+  	geom_vline(xintercept = 12)
+
+#Save plot
+ggsave(
+  "mitochondrial_hist.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+```
+
+## Visualising the proportion of genes per UMI
+```{r}
+#Genes per UMI
+Tabib@meta.data %>%
+  	ggplot(aes(x=log10GenesPerUMI, color = Tabib_name, fill=Tabib_name)) +
+  	geom_density(alpha = 0.2) +
+  	theme_classic() +
+  	geom_vline(xintercept = 0.8)
+```
+
+#Subsetting seurat object
+```{r}
+Tabib2 <- subset(x=Tabib, 
+                           (percent.mt <=12) &
+                            (nFeature_RNA >=400) &
+                            (nCount_RNA >= 1000))
+
+before <- table(Tabib@meta.data['Tabib_name'])
+after <- table(Tabib2@meta.data['Tabib_name'])
+
+before <- as.data.frame(before)
+after <- as.data.frame(after)
+
+combo <- merge(before, after, by = "Tabib_name")
+
+
+combo2 <- melt(combo)
+
+
+
+ggplot(combo2, aes(fill=variable, y=value, x=Tabib_name)) + 
+    geom_bar(position="dodge", stat="identity")
+
+#Save plot
+ggsave(
+  "beforeandafterfilt.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+
+Tabib2 <- NormalizeData(Tabib2)
+```
+
+## Finding top variable genes within the dataset
+
+```{r}
+#Selecting highly variable features - high cell to cell variation
+Tabib2 <- FindVariableFeatures(Tabib2, selection.method ="vst", nfeatures=2000)
+
+#Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(Tabib2), 10)
+top10
+
+top2000 <- head(VariableFeatures(Tabib2), 2000)
+top2000
+
+#Plot variable features without labels
+plot1 <- VariableFeaturePlot(Tabib2)
+
+#Plot variable features with labels
+plot2 <- LabelPoints(plot=plot1, points = top10, repel=TRUE)
+plot1
+plot2
+
+ggsave(
+  "topvariablefeatures.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+```
+
+## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
+```{r}
+all.genes <- rownames(Tabib2)
+Tabib2 <- ScaleData(Tabib2, features = all.genes)
+
+#Performing a PCA
+Tabib2 <- RunPCA(Tabib2, features=VariableFeatures(object = Tabib2))
+
+#Plotting the PCA
+PCA_no_label <- DimPlot(Tabib2, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
+PCA_Sample_label <- DimPlot(Tabib2, reduction = "pca", seed = 123, group.by = "Tabib_name")
+
+PCA_no_label
+ggsave(
+  "PCA_nolabel.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+
+PCA_Sample_label
+ggsave(
+  "PCA_PDLlabel.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+
+
+```
+
+## Heatmaps to investigate the genes influencing the top PCs
+```{r}
+DimHeatmap(Tabib2, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(Tabib2, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(Tabib2)
+```
+
+## Clustering the cells using KNN
+```{r}
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+Tabib2 <- FindNeighbors(Tabib2, dims =1:10)
+
+#group cells using findclusters function
+Tabib2 <- FindClusters(Tabib2, resolution = 0.2)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(Tabib2), 5)
+```
+
+## Plot UMAP
+```{r}
+#Running a UMAP
+Tabib2 <- RunUMAP(Tabib2, dims=1:10)
+
+DimPlot(Tabib2, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48")) +
+  custom_theme(base_size=20)
+ggsave(
+  "UMAP_clusters_all.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+
+DimPlot(Tabib2, reduction = "umap", seed = 123, group.by="Tabib_name", cols = c("#2e5266", "#ecb0e1", "#832232", "#a6a867", "#bc5f04", "#f9a52c")) + 
+  custom_theme(base_size=20)
+ggsave(
+  "UMAP_clusters_all_Sample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+```
+
+##Testing ScPred 3D ML model
+```{r}
+#MDA radial model
+query <- NormalizeData(Tabib2)
+query <- scPredict(query, hdf_mda3D)
+
+DimPlot(query, group.by = "Tabib_name", label = FALSE, repel = TRUE, label.size=2, seed=123) + 
+  custom_theme(base_size=20)
+        
+       
+ggsave(
+  "UMAP_Sample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+
+
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4")) + 
+  custom_theme(base_size=20)
+
+ggsave(
+  "UMAP_scpred_EPDS_3D.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/TabibALL"
+  )
+```
+
+## Investigating the percentage of DS predicted cells per age
+
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("age", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+
+
+df <- tibble::rownames_to_column(percentages, "age")
+perc <- melt(df)
+v <- perc$age
+
+percentages_Tabib3D_ALL <- perc
+write.csv(percentages_Tabib3D_ALL, "../Output/Tabib/EPDS3D_tabibALL.csv")
+#convert 'variable' to factor and specify level order
+perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', 'DS2D'))
+
+print(perc)
+
+#create stacked bar chart
+ggplot(perc, aes(x=age, y=value, fill=variable)) + 
+    geom_bar(position='stack', stat='identity') +
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "darkblue")) +
+  custom_theme(base_size=20)
+
+ggsave("barplot_stacked_2Dpred_age.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/Tabib"
+  )
+
+```
+
+##Sole Boldo
+
+```{r}
+Sole <- readRDS("../Inputfiles/Sole-Boldo_SeuratObject_New-AD21-Clusters.rds")
+
+```
+## Applying same QC metrics as my data to test for outliers. 
+nCount_RNA > 1000
+nFeature_RNA > 400
+percent.mt <= 12
+
+
+```{r}
+#Adding mitochondrial percentage and number of genes per UMI
+Sole$log10GenesPerUMI <- log10(Sole$nFeature_RNA) / log10(Sole$nCount_RNA)
+
+Sole[["percent.mt"]] <- PercentageFeatureSet(Sole, pattern = "^MT-")
+
+#Visualise the number of cells per sample
+Sole@meta.data %>% 
+  	ggplot(aes(x=SoleBoldo_name, fill=SoleBoldo_name)) + 
+  	geom_bar() +
+  	theme_classic() +
+  	theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	ggtitle("NCells")
+
+#Save plot
+ggsave(
+  "NumbersPerSample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+
+```
+
+## Visualising the number of UMIs per cell (nCount_RNA)
+
+```{r}
+#Number of UMIs (transcripts) per cell
+Sole@meta.data %>% 
+  	ggplot(aes(color=SoleBoldo_name, x=nCount_RNA, fill= SoleBoldo_name)) + 
+  	geom_density(alpha = 0.2) + 
+  	scale_x_log10() + 
+  	theme_classic() +
+  	ylab("Cell density") +
+  	geom_vline(xintercept = 1000)
+
+#Save plot
+ggsave(
+  "UMIspercell.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+
+
+```
+
+## Visualising number of genes per cell (nFeature_RNA)
+```{r}
+# Visualize the distribution of genes detected per cell via histogram
+Sole@meta.data %>% 
+  	ggplot(aes(color=SoleBoldo_name, x=nFeature_RNA, fill= SoleBoldo_name)) + 
+  	geom_density(alpha = 0.2) + 
+  	theme_classic() +
+  	scale_x_log10() + 
+  	geom_vline(xintercept = c(400))
+
+#Save plot
+ggsave(
+  "hist_featureRNA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+
+# Visualize the distribution of genes detected per cell via boxplot
+Sole@meta.data %>% 
+  	ggplot(aes(x=SoleBoldo_name, y=log10(nFeature_RNA), fill=SoleBoldo_name)) + 
+  	geom_boxplot() + 
+  	theme_classic() +
+  	theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	ggtitle("NCells vs NGenes")
+
+#Save plot
+ggsave(
+  "boxplot_featureRNA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+```
+
+## Combining number of genes, UMIs and mitochondrial percentage, to show thresholding boundaries
+```{r}
+Sole@meta.data %>% 
+  	ggplot(aes(x=nCount_RNA, y=nFeature_RNA, color=percent.mt)) + 
+  	geom_point() + 
+	scale_colour_gradient(low = "gray90", high = "black") +
+  	stat_smooth(method=lm) +
+  	scale_x_log10() + 
+  	scale_y_log10() + 
+  	theme_classic() +
+  	geom_vline(xintercept = 1000) +
+  	geom_hline(yintercept = 400) +
+  	facet_wrap(~SoleBoldo_name)
+
+#Save plot
+ggsave(
+  "threshold_feature_count_mito.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+```
+
+## Mitochondrial gene expression per cell
+
+```{r}
+# Visualize the distribution of mitochondrial gene expression detected per cell
+Sole@meta.data %>% 
+  	ggplot(aes(color=SoleBoldo_name, x=percent.mt, fill=SoleBoldo_name)) + 
+  	geom_density(alpha = 0.2) + 
+  	scale_x_log10() + 
+  	theme_classic() +
+  	geom_vline(xintercept = 12)
+
+#Save plot
+ggsave(
+  "mitochondrial_hist.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+```
+
+## Visualising the proportion of genes per UMI
+```{r}
+#Genes per UMI
+Sole@meta.data %>%
+  	ggplot(aes(x=log10GenesPerUMI, color = SoleBoldo_name, fill=SoleBoldo_name)) +
+  	geom_density(alpha = 0.2) +
+  	theme_classic() +
+  	geom_vline(xintercept = 0.8)
+```
+
+#Subsetting seurat object
+```{r}
+Sole2 <- subset(x=Sole, 
+                           (percent.mt <=12) &
+                            (nFeature_RNA >=400) &
+                            (nCount_RNA >= 1000))
+
+before <- table(Sole@meta.data['SoleBoldo_name'])
+after <- table(Sole2@meta.data['SoleBoldo_name'])
+
+before <- as.data.frame(before)
+after <- as.data.frame(after)
+
+combo <- merge(before, after, by = "SoleBoldo_name")
+
+
+combo2 <- melt(combo)
+
+
+
+ggplot(combo2, aes(fill=variable, y=value, x=SoleBoldo_name)) + 
+    geom_bar(position="dodge", stat="identity")
+
+#Save plot
+ggsave(
+  "beforeandafterfilt.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+
+#Normalise - log10normalisation
+Sole2 <- NormalizeData(Sole2)
+
+```
+
+## Finding top variable genes within the dataset
+
+```{r}
+#Selecting highly variable features - high cell to cell variation
+Sole2 <- FindVariableFeatures(Sole2, selection.method ="vst", nfeatures=2000)
+
+#Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(Sole2), 10)
+top10
+
+top2000 <- head(VariableFeatures(Sole2), 2000)
+top2000
+
+#Plot variable features without labels
+plot1 <- VariableFeaturePlot(Sole2)
+
+#Plot variable features with labels
+plot2 <- LabelPoints(plot=plot1, points = top10, repel=TRUE)
+plot1
+plot2
+
+ggsave(
+  "topvariablefeatures.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+```
+
+## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
+```{r}
+all.genes <- rownames(Sole2)
+Sole2 <- ScaleData(Sole2, features = all.genes)
+
+#Performing a PCA
+Sole2 <- RunPCA(Sole2, features=VariableFeatures(object = Sole2))
+
+#Plotting the PCA
+PCA_no_label <- DimPlot(Sole2, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
+PCA_Sample_label <- DimPlot(Sole2, reduction = "pca", seed = 123, group.by = "SoleBoldo_name")
+
+PCA_no_label
+ggsave(
+  "PCA_nolabel.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+
+PCA_Sample_label
+ggsave(
+  "PCA_PDLlabel.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+
+
+```
+
+## Heatmaps to investigate the genes influencing the top PCs
+```{r}
+DimHeatmap(Sole2, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(Sole2, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(Sole2)
+```
+
+## Clustering the cells using KNN
+```{r}
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+Sole2 <- FindNeighbors(Sole2, dims =1:10)
+
+#group cells using findclusters function
+Sole2 <- FindClusters(Sole2, resolution = 0.6)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(Sole2), 5)
+```
+
+## Plot UMAP
+```{r}
+#Running a UMAP
+Sole2 <- RunUMAP(Sole2, dims=1:10)
+
+DimPlot(Sole2, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12", "#652A0E", "tan3", "peachpuff", "blue", "red", "brown")) +
+  custom_theme(base_size=20)
+ggsave(
+  "UMAP_clusters_all.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+
+
+DimPlot(Sole2, reduction = "umap", seed = 123, group.by="SoleBoldo_name", cols = c("#2e5266", "#ecb0e1", "#832232", "#a6a867", "#bc5f04", "#f9a52c"))+
+  custom_theme(base_size=20)
+ggsave(
+  "UMAP_clusters_all_Sample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+```
+
+##Testing ScPred 2D MDA ML model on Chan datasets
+```{r}
+#MDA radial model
+query <- NormalizeData(Sole2)
+query <- scPredict(query, hdf_mda3D)
+
+DimPlot(query, group.by = "SoleBoldo_name", label = FALSE, repel = TRUE, label.size=2, seed=123) +
+  custom_theme(base_size=20)
+        
+       
+ggsave(
+  "UMAP_PDL_notert_Sample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+
+
+DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4")) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "UMAP_scpred_EPDS_3D.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+```
+
+## Investigating the percentage of DS predicted cells per age
+
+```{r}
+query2 <- query@meta.data
+table <- table(query2[, c("age", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+
+
+df <- tibble::rownames_to_column(percentages, "age")
+perc <- melt(df)
+v <- perc$age
+
+percentages_Sole2D <- perc
+write.csv(percentages_Sole2D, "../Output/SoleBoldoALL/EPDS3D_soleall.csv")
+#convert 'variable' to factor and specify level order
+perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP3D', 'PDL50', 'DS3D'))
+
+print(perc)
+
+#create stacked bar chart
+ggplot(perc, aes(x=age, y=value, fill=variable)) + 
+    geom_bar(position='stack', stat='identity') +
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "darkblue")) +
+  custom_theme(base_size=20)
+
+ggsave("barplot_stacked_3Dpred_age.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/SoleBoldoALL"
+  )
+
+```
+
+#Ganier
+```{r}
+##Testing ScPred 3D ML models on Ganier datasets
+#MDA radial model
+queryGanier <- NormalizeData(Ganier_integrated)
+queryGanier <- scPredict(queryGanier, hdf_mda3D)
+
+DimPlot(queryGanier, group.by = "age", label = FALSE, repel = TRUE, label.size=2, seed=123) + 
+  custom_theme(base_size=20)
+        
+       
+ggsave(
+  "UMAP_Sample.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/GanierALL"
+  )
+
+
+DimPlot(queryGanier, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4")) + 
+  custom_theme(base_size=20)
+
+ggsave(
+  "UMAP_scpred_EPDS_3D.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/GanierALL"
+  )
+```
+
+
+## Investigating the percentage of DS predicted cells per age
+
+```{r}
+query2 <- queryGanier@meta.data
+table <- table(query2[, c("age", "scpred_prediction")])
+table
+mat <- as.data.frame.matrix(table)
+mat
+
+percentages <- (mat/rowSums(mat))*100
+percentages
+percentages <- na.omit(percentages)
+percentages
+as.matrix(percentages)
+percentages <- percentages[ order(row.names(percentages)), ]
+
+percentages_Ganier3D <- percentages
+write.csv(percentages_Ganier3D, "../Output/GanierALL/EPDS3D_ganierall.csv")
+
+df <- tibble::rownames_to_column(percentages, "age")
+perc <- melt(df)
+v <- perc$age
+
+print (perc)
+#convert 'variable' to factor and specify level order
+perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP3D', 'DS3D'))
+
+#create stacked bar chart
+ggplot(perc, aes(x=age, y=value, fill=variable)) + 
+    geom_bar(position='stack', stat='identity') +
+  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "darkblue")) +
+  custom_theme(base_size=20)
+
+ggsave("barplot_stacked_3Dpred_age.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/GanierALL"
+  )
+
+```
+
+#Combining Tabib, Sole, and Ganier predictions for scatterplot - 3D ALL
+
+```{r}
+Tabib <- read.csv("../Output/Tabib/EPDS3D_tabibALL.csv")
+Sole <- read.csv("../Output/SoleBoldoALL/EPDS3D_soleall.csv")
+Ganier <- read.csv("../Output/GanierALL/EPDS3D_ganierall.csv")
+
+# Set the first column as row names
+rownames(Ganier) <- Ganier[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier <- Ganier[, -1]
+
+# Set the first column as row names
+rownames(Tabib) <- Tabib[, 1]
+
+# Remove the first column (it is now redundant)
+Tabib <- Tabib[, -1]
+
+# Set the first column as row names
+rownames(Sole) <- Sole[, 1]
+
+# Remove the first column (it is now redundant)
+Sole <- Sole[, -1]
+
+```
+
+
+```{r}
+# Create a list of data frames
+df_list <- list(Tabib, Sole, Ganier)
+
+# Extract row names and create a new column "age" in each data frame
+for (i in seq_along(df_list)) {
+  df_list[[i]]$age <- rownames(df_list[[i]])
+}
+
+# Merge data frames based on common columns
+merged_df <- Reduce(function(x, y) merge(x, y, by = intersect(names(x), names(y)), all = TRUE), df_list)
+
+# Print the merged data frame
+print(merged_df)
+
+file_path <- "../Output/allpercentagepredictions_ALL3D.csv"
+write.csv(merged_df, file = file_path, row.names = TRUE)
+```
+
+```{r}
+merged_df <- merged_df[, -c(2, 4)]
+
+# Assuming merged_df is your merged data frame
+library(ggplot2)
+
+# Convert merged_df to long format
+merged_long <- tidyr::pivot_longer(merged_df, cols = -age, names_to = "variable", values_to = "value")
+
+# Convert 'age' to numeric
+merged_long$age <- as.numeric(merged_long$age)
+
+# Create a scatterplot with a trendline
+p <- ggplot(merged_long, aes(x = age, y = value)) +
+  geom_point(size = 3, color = "blue") +  # Make points larger and blue
+  geom_smooth(method = "lm", se = FALSE, color = "black", size = 0.7) +  # Make trendline slightly thinner
+  labs(title = NULL, x = "Age", y = "Percentage DS predicted cells") +
+  theme_minimal() +
+  theme(panel.grid = element_blank())  # Remove gridlines
+
+# Extract Pearson correlation coefficient and p-values
+cor_coef <- cor.test(merged_long$age, merged_long$value, method = "pearson")
+pearson_cor <- sprintf("Pearson correlation = %.3f", cor_coef$estimate)
+pval <- sprintf("p = %.3f", cor_coef$p.value)
+
+# Add R-squared and p-values as text
+p + 
+  geom_text(x = max(merged_long$age), y = max(merged_long$value), label = paste(pearson_cor, pval, sep = ", "), hjust = 1, vjust = 10) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "scatterplot_3DALL_TabibGanierSole.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output"
+  )
+
+
+```
+
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.

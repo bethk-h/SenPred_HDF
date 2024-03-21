@@ -7,7 +7,7 @@ output:
     toc: TRUE
 urlcolor: blue
 ---
-Machine learning model built from single cell RNA sequencing of replicative senescent and early proliferative human detmal fibroblasts
+Machine learning model built from single cell RNA sequencing of replicative senescent and early proliferative human dermal fibroblasts
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
  collapse = TRUE,
@@ -54,7 +54,7 @@ Package versions are stored in [renv.lock](renv.lock) file. To use this folder, 
 
 ### File overview
 ##### R Scripts
-All scripts can be found in the [R_scripts](R_scripts) folder. The number prefix indicates the order the files should be run (from 1 to 12). To run the complete analysis, first run [95_Make_Clean.rmd]() to create or clean the results folder. Then, run [99_Run_All.rmd]() to run the scripts in order.
+All scripts can be found in the [R_scripts](R_scripts) folder. The number prefix indicates the order the files should be run (from 1 to 18). To run the complete analysis, first run [95_Make_Clean.rmd]() to create or clean the results folder. Then, run [99_Run_All.rmd]() to run the scripts in order.
 
 ### Analysis pipeline
 * [1_HDF_data.Rmd](R_scripts/1_HDF_data.Rmd) - loading data and converting into Seurat object.
@@ -63,11 +63,20 @@ All scripts can be found in the [R_scripts](R_scripts) folder. The number prefix
 * [4_Scpred_2D.Rmd](R_scripts/4_Scpred_2D.Rmd) - Building machine learning models of proliferative and senescent HDFs in 2D, using ScPred package (see https://github.com/powellgenomicslab/scPred).
 * [5_ScPred2d_Chan.Rmd](R_scripts/5_ScPred2d_Chan.Rmd) - Testing ML models on external replicative senescence fibroblast single cell RNA seq data set from Chan et al. (Chan, M., Yuan, H., Soifer, I., Maile, T.M., Wang, R.Y., Ireland, A., O'Brien, J.J., Goudeau, J., Chan, L.J., Vijay, T. and Freund, A., 2022. Novel insights from a multiomics dissection of the Hayflick limit. Elife, 11, p.e70283.).
 * [6_ScPred2D_Chan_EPESDS.Rmd](R_scripts/6_ScPred2D_Chan_EPESDS.Rmd) - Building PDL50 cells from Chan et al. into the model, as ES or 'Early Senescent' cells.
-* [7_Tabib.Rmd](R_scripts/7_Tabib.Rmd) - Testing the 2D model on external whole skin in vivo single cell RNA seq dataset from Tabib et al. (Tabib, T., Morse, C., Wang, T., Chen, W. and Lafyatis, R., 2018. SFRP2/DPP4 and FMO1/LSP1 define major fibroblast populations in human skin. Journal of Investigative Dermatology, 138(4), pp.802-810.)
-* [8_soleboldo.Rmd](R_scripts/8_soleboldo.Rmd) - Testing the 2D model on external whole skin in vivo single cell RNA seq dataset from Solé-Boldo et al. (Solé-Boldo, L., Raddatz, G., Schütz, S., Mallm, J.P., Rippe, K., Lonsdorf, A.S., Rodríguez-Paredes, M. and Lyko, F., 2020. Single-cell transcriptomes of the human skin reveal age-related loss of fibroblast priming. Communications biology, 3(1), p.188.)
-* [9_ScPred_3D.Rmd](R_scripts/9_ScPred_3D.rmd) - Building an ML model to predict senescence of 3D fibroblasts.
-* [10_3Dpred_Tabib.Rmd](R_scripts/10_3Dpred_Tabib.Rmd) - Testing the 3D model on external whole skin in vivo single cell RNA seq dataset from Tabib et al. (Tabib, T., Morse, C., Wang, T., Chen, W. and Lafyatis, R., 2018. SFRP2/DPP4 and FMO1/LSP1 define major fibroblast populations in human skin. Journal of Investigative Dermatology, 138(4), pp.802-810.)
-* [11_3Dpred_SoleBoldo.Rmd](R_scripts/11_3Dpred_SoleBoldo.Rmd) - Testing the 3D model on external whole skin in vivo single cell RNA seq dataset from Solé-Boldo et al. (Solé-Boldo, L., Raddatz, G., Schütz, S., Mallm, J.P., Rippe, K., Lonsdorf, A.S., Rodríguez-Paredes, M. and Lyko, F., 2020. Single-cell transcriptomes of the human skin reveal age-related loss of fibroblast priming. Communications biology, 3(1), p.188.)
+* [7_Teo.Rmd](R_scripts/7_Teo.Rmd) - Applying the EP/ES/DS SenPred model to an alternative dataset, with OIS and paracrine triggers. (Teo, Y.V., Rattanavirotkul, N., Olova, N., Salzano, A., Quintanilla, A., Tarrats, N., Kiourtis, C., Müller, M., Green, A.R., Adams, P.D. and Acosta, J.C., 2019. Notch signaling mediates secondary senescence. Cell reports, 27(4), pp.997-1007.)
+* [8_Tabib.Rmd](R_scripts/8_Tabib.Rmd) - Testing the 2D model on external whole skin in vivo single cell RNA seq dataset from Tabib et al. (Tabib, T., Morse, C., Wang, T., Chen, W. and Lafyatis, R., 2018. SFRP2/DPP4 and FMO1/LSP1 define major fibroblast populations in human skin. Journal of Investigative Dermatology, 138(4), pp.802-810.)
+* [9_soleboldo.Rmd](R_scripts/9_soleboldo.Rmd) - Testing the 2D model on external whole skin in vivo single cell RNA seq dataset from Solé-Boldo et al. (Solé-Boldo, L., Raddatz, G., Schütz, S., Mallm, J.P., Rippe, K., Lonsdorf, A.S., Rodríguez-Paredes, M. and Lyko, F., 2020. Single-cell transcriptomes of the human skin reveal age-related loss of fibroblast priming. Communications biology, 3(1), p.188.)
+* [10_soleboldo_tabib_combined2D.Rmd](R_scripts/10_soleboldo_tabib_combined2D.Rmd) - Integrating Tabib and Sole Boldo datasets to combine donor predictions from 2D EP/ES/DS SenPred model.
+* [11_ScPred_3D.Rmd](R_scripts/11_ScPred_3D.rmd) - Building an ML model to predict senescence of 3D fibroblasts.
+* [12_3Dpred_Tabib.Rmd](R_scripts/12_3Dpred_Tabib.Rmd) - Testing the 3D model on external whole skin in vivo single cell RNA seq dataset from Tabib et al. (Tabib, T., Morse, C., Wang, T., Chen, W. and Lafyatis, R., 2018. SFRP2/DPP4 and FMO1/LSP1 define major fibroblast populations in human skin. Journal of Investigative Dermatology, 138(4), pp.802-810.)
+* [13_3Dpred_SoleBoldo.Rmd](R_scripts/13_3Dpred_SoleBoldo.Rmd) - Testing the 3D model on external whole skin in vivo single cell RNA seq dataset from Solé-Boldo et al. (Solé-Boldo, L., Raddatz, G., Schütz, S., Mallm, J.P., Rippe, K., Lonsdorf, A.S., Rodríguez-Paredes, M. and Lyko, F., 2020. Single-cell transcriptomes of the human skin reveal age-related loss of fibroblast priming. Communications biology, 3(1), p.188.)
+* [14_soleboldo_tabib_combined3D.Rmd](R_scripts/14_soleboldo_tabib_combined3D.Rmd) - Combining the 3D SenPred predictions for Tabib and Sole Boldo datasets. Generating heatmaps of common senescence marker correlations in cells predicted to be EP or DS.
+* [15_matrisome.Rmd](R_scripts/15_matrisome.Rmd) - Importing NABA_MATRISOME genes from the matrisome project https://sites.google.com/uic.edu/matrisome/home?authuser=0, to compare ECM expression in fibroblasts grown in 2D, 3D, and in vivo.
+* [16_Ganier.Rmd](R_scripts/16_Ganier.Rmd) - Testing SenPred on an additional whole skin dataset by Ganier et al, and combining these donor predictions with the Tabib and Sole Boldo datasets to investigate age related trends in senescence predictions. Paper: Ganier, C., Mazin, P., Herrera-Oropeza, G., Du-Harpur, X., Blakeley, M., Gabriel, J., Predeus, A.V., Cakir, B., Prete, M., Harun, N. and Darrigrand, J.F., 2024. Multiscale spatial mapping of cell populations across anatomical sites in healthy human skin and basal cell carcinoma. Proceedings of the National Academy of Sciences, 121(2), p.e2313326120.
+* [17_alldermal_celltypes.Rmd](R_scripts/17_alldermal_celltypes.Rmd) - Testing 3D SenPred on all skin cells from Tabib, Sole Boldo, and Ganier datasets.
+* [18_lungs.Rmd](R_scripts/18_lungs.Rmd) - Testing 3D SenPred on fibroblasts from lung tissue. The data was obtained from the human cell atlas using the following paper: Sikkema, L., Ramírez-Suástegui, C., Strobl, D.C., Gillett, T.E., Zappia, L., Madissoon, E., Markov, N.S., Zaragosi, L.E., Ji, Y., Ansari, M. and Arguel, M.J., 2023. An integrated cell atlas of the lung in health and disease. Nature Medicine, 29(6), pp.1563-1577.
+Data was downloaded from cellxgene at the following link:
+https://cellxgene.cziscience.com/collections/6f6d381a-7701-4781-935c-db10d30de293
 
 
 ### Output

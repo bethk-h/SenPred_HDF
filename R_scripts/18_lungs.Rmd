@@ -1,0 +1,520 @@
+---
+title: "Untitled"
+author: "BH"
+date: "2024-02-23"
+output: html_document
+---
+# To test SenPred on fibroblasts from another tissue, the lung, I extracted data from the human cell atlas using the following paper:
+Sikkema, L., Ramírez-Suástegui, C., Strobl, D.C., Gillett, T.E., Zappia, L., Madissoon, E., Markov, N.S., Zaragosi, L.E., Ji, Y., Ansari, M. and Arguel, M.J., 2023. An integrated cell atlas of the lung in health and disease. Nature Medicine, 29(6), pp.1563-1577.
+
+Data was downloaded from cellxgene at the following link:
+https://cellxgene.cziscience.com/collections/6f6d381a-7701-4781-935c-db10d30de293
+
+```{r}
+lung <- readRDS("../Inputfiles/lungatlas.rds")
+
+unique_studies <- unique(lung@meta.data$dataset)
+unique_terms <- unique(lung@meta.data$scanvi_label)
+unique_terms
+
+#First subsetted for cells that were pre-defined as from 'fibroblast lineage'
+lung_fibroblast <- subset(lung, subset = scanvi_label == 'Fibroblast lineage')
+
+```
+
+```{r}
+unique_terms2 <- unique (lung_fibroblast@meta.data$ann_finest_level)
+unique_terms2 <- as.data.frame(unique_terms2)
+
+#Then, subset for actual fibroblasts
+lung_fibroblast2 <- subset(lung_fibroblast, subset = ann_finest_level %in% c("Adventitial fibroblasts", "Peribronchial fibroblasts", "Alveolar fibroblasts", "Myofibroblasts", "Subpleural fibroblasts"))
+
+#Subset to only use data from healthy lung condition donors
+lung_fibroblast3 <- subset(lung_fibroblast2, subset = lung_condition == "Healthy")
+
+ages <- unique(lung_fibroblast3@meta.data$age_or_mean_of_age_range)
+ages <- as.data.frame(ages)
+
+#Remove any donors where the age was not reported
+lung_fibroblast4 <- subset(lung_fibroblast3, subset = age_or_mean_of_age_range != "NaN")
+
+ages2 <- unique(lung_fibroblast4@meta.data$age_or_mean_of_age_range)
+ages2 <- as.data.frame(ages2)
+ 
+#Only select donors with more than 100 cells
+# Create a vector of ages to filter
+selected_ages <- c("25", "29", "30", "32.5", "34", "35", "42.5", "49",
+                   "50", "52", "52.5", "55", "57", "57.5", "59", "62",
+                   "64", "67.5")
+
+# Filter the Seurat object based on the selected ages
+lung_fibroblast4 <- subset(lung_fibroblast4, 
+                                    subset = age_or_mean_of_age_range %in% selected_ages)
+```
+
+## Converting Ensembl ID to gene_symbol
+```{r}
+#install.packages("EnsDb.Hsapiens.v86")
+library(EnsDb.Hsapiens.v86)
+
+Gene_ID <- lung_fibroblast4@assays[["RNA"]]@counts@Dimnames[[1]]
+Gene_ID <- as.data.frame(Gene_ID)
+
+gene_name <- mapIds (EnsDb.Hsapiens.v86,
+                     keys = Gene_ID$Gene_ID,
+                     keytype = 'GENEID',
+                     column = 'SYMBOL')
+
+gene_name <- as.data.frame(gene_name)
+
+# Function to add '-' to gene names starting with 'MT'
+add_hyphen <- function(x) {
+  # Replace 'MT' with 'MT-' for gene names starting with 'MT'
+  x <- gsub("^MT", "MT-", x)
+  return(x)
+}
+
+# Apply the function to the 'gene_name' column
+gene_name$gene_name <- add_hyphen(gene_name$gene_name)
+
+# Print the modified dataframe
+print(gene_name)
+
+gene_name$gene_ids <- Gene_ID [["Gene_ID"]]
+
+# Combine gene_name with Gene_ID
+combined_data <- merge(Gene_ID, gene_name, by.x = "Gene_ID", by.y = "gene_ids", all.x = TRUE)
+
+library(dplyr)
+
+# Assuming combined_data is your DataFrame
+duplicate_rows <- combined_data %>%
+  dplyr::filter(duplicated(gene_name) | duplicated(gene_name, fromLast = TRUE))
+
+# View the duplicate rows
+print(duplicate_rows)
+
+# Assuming combined_data is your DataFrame
+combined_data <- combined_data %>%
+  mutate(gene_name = ifelse(duplicated(gene_name) | duplicated(gene_name, fromLast = TRUE),
+                            paste0(gene_name, '-1'),
+                            gene_name))
+
+MT_genes <- combined_data %>%
+  dplyr::filter(startsWith(gene_name, "MT-"))
+
+print(MT_genes)
+
+
+# Assuming gene_name is your DataFrame containing gene symbols
+genes_with_double_hyphen <- gene_name %>%
+  dplyr::filter(grepl("--", gene_name))
+
+# Assuming combined_data is your DataFrame containing the gene_ids column
+gene_ids <- genes_with_double_hyphen$gene_ids
+gene_ids <- as.data.frame(gene_ids)
+gene_ids <- gene_ids %>%
+  mutate(gene_ids = str_replace(gene_ids, "--", "-"))
+gene_ids_mito <- gene_ids
+
+# Save the gene_ids column as a CSV file
+write.csv(gene_ids, file = "../Output/LungAtlas/mito_gene_ids.csv", row.names = FALSE)
+
+```
+
+
+```{r}
+
+pattern <- gene_ids_mito$gene_ids
+
+# Calculate the percentage of cells expressing the features in gene_ids_mito
+lung_fibroblast4[["percent.mt"]] <- PercentageFeatureSet(lung_fibroblast4, pattern = pattern)
+
+
+
+#Adding no. of genes per UMI.
+lung_fibroblast4$log10GenesPerUMI <- log10(lung_fibroblast4$nFeature_RNA) / log10(lung_fibroblast4$nCount_RNA)
+
+#Visualise the number of cells per age_or_mean_of_age_range
+CellNumbers <- lung_fibroblast4@meta.data %>% 
+  	           ggplot(aes(x=age_or_mean_of_age_range, fill=age_or_mean_of_age_range)) + 
+  	           geom_bar() +
+  	           theme_classic() +
+  	           theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	           theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	           ggtitle("NCells")
+
+CellNumbers
+
+#Save plot
+ggsave(
+  "NumbersPerage_or_mean_of_age_range.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+
+```
+## Visualising QC metrics - nFeature_RNA, nCount_RNA, percent.mt
+```{r}
+# Create plot
+violin <- VlnPlot(lung_fibroblast4, features =c("nFeature_RNA", "nCount_RNA", "percent.mt"))
+violin
+
+#Save plot
+ggsave(
+  "HDF_QC_violin.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+```
+
+## Visualising the number of UMIs per cell (nCount_RNA)
+```{r}
+#Number of UMIs (transcripts) per cell
+UMIspercell <- lung_fibroblast4@meta.data %>% 
+  	           ggplot(aes(color=age_or_mean_of_age_range, x=nCount_RNA, fill= age_or_mean_of_age_range)) + 
+  	           geom_density(alpha = 0.2) + 
+  	           scale_x_log10() + 
+  	           theme_classic() +
+  	           ylab("Cell density") +
+  	           geom_vline(xintercept = 1000) 
+
+UMIspercell
+
+#Save plot
+ggsave(
+  "UMI-per-cell.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+
+```
+## Visualising number of genes per cell (nFeature_RNA)
+```{r}
+# Visualize the distribution of genes detected per cell via histogram
+hist_feature<- lung_fibroblast4@meta.data %>% 
+  	           ggplot(aes(color=age_or_mean_of_age_range, x=nFeature_RNA, fill= age_or_mean_of_age_range)) + 
+  	           geom_density(alpha = 0.2) + 
+  	           theme_classic() +
+  	           scale_x_log10() + 
+  	           geom_vline(xintercept = c(400)) 
+
+hist_feature
+
+#Save plot
+ggsave(
+  "hist_featureRNA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+
+# Visualize the distribution of genes detected per cell via boxplot
+boxplot_feature <- lung_fibroblast4@meta.data %>% 
+    	             ggplot(aes(x=age_or_mean_of_age_range, y=log10(nFeature_RNA), fill=age_or_mean_of_age_range)) + 
+  	               geom_boxplot() + 
+  	               theme_classic() +
+  	               theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	               theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	               ggtitle("NCells vs NGenes")
+
+boxplot_feature
+
+#Save plot
+ggsave(
+  "boxplot_featureRNA.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+    
+```
+
+## Combining number of genes, UMIs and mitochondrial percentage, to show thresholding boundaries
+```{r}
+thresholding <- lung_fibroblast4@meta.data %>% 
+  	            ggplot(aes(x=nCount_RNA, y=nFeature_RNA, color=percent.mt)) + 
+  	            geom_point() + 
+	              scale_colour_gradient(low = "gray90", high = "black") +
+  	            stat_smooth(method=lm) +
+  	            scale_x_log10() + 
+  	            scale_y_log10() + 
+  	            theme_classic() +
+  	            geom_vline(xintercept = 1000) +
+  	            geom_hline(yintercept = 400) +
+  	            facet_wrap(~age_or_mean_of_age_range) 
+
+thresholding
+
+ggsave(
+  "thresholding_feature_count_mito.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+```
+## Mitochondrial gene expression per cell
+```{r}
+# Visualize the distribution of mitochondrial gene expression detected per cell
+mitochondrial_genes <- lung_fibroblast4@meta.data %>% 
+                    	 ggplot(aes(color=age_or_mean_of_age_range, x=percent.mt, fill=age_or_mean_of_age_range)) + 
+  	                   geom_density(alpha = 0.2) + 
+  	                   scale_x_log10() + 
+  	                   theme_classic() +
+  	                   geom_vline(xintercept = 12) 
+
+mitochondrial_genes
+
+ggsave(
+  "mitochondrial_hist.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+```
+## Visualising the proportion of genes per UMI
+```{r}
+genesperUMI <- lung_fibroblast4@meta.data %>%
+  	           ggplot(aes(x=log10GenesPerUMI, color = age_or_mean_of_age_range, fill=age_or_mean_of_age_range)) +
+  	           geom_density(alpha = 0.2) +
+  	           theme_classic() +
+  	           geom_vline(xintercept = 0.8) 
+
+genesperUMI
+
+ggsave(
+  "genesperUMI.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+```
+
+#Subsetting seurat object
+```{r}
+lung_fibroblast4_filt <- subset(x=lung_fibroblast4, 
+                         subset= (percent.mt <=12) &
+                            (nFeature_RNA >=400) &
+                            (nCount_RNA >= 1000))
+
+#Visualising number of cells before and after subsetting
+df.list <- list(Original=lung_fibroblast4@meta.data, Filtered=lung_fibroblast4_filt@meta.data)
+dat <- stack(lapply(df.list, `[[`, "age_or_mean_of_age_range"))
+numbers_after_filt <- ggplot(dat, aes(x=values, fill=ind)) + geom_bar(position="dodge") 
+
+numbers_after_filt
+
+ggsave(
+  "barplot_beforeandafterfilt.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+
+```
+
+## Normalisation - Normalise gene expression per cell by the total gene expression within that cell. This is then multiplied by a default scale factor (10,000), and log-transformed.
+```{r}
+
+lung_fibroblast4_filt <- NormalizeData(lung_fibroblast4_filt)
+ages <- unique(lung_fibroblast4_filt@meta.data$age_or_mean_of_age_range)
+ages <- as.data.frame(ages)
+
+```
+
+
+```{r}
+library(EnsDb.Hsapiens.v86)
+
+Gene_ID <- lung_fibroblast4_filt@assays[["RNA"]]@counts@Dimnames[[1]]
+Gene_ID <- as.data.frame(Gene_ID)
+
+gene_name <- mapIds (EnsDb.Hsapiens.v86,
+                     keys = Gene_ID$Gene_ID,
+                     keytype = 'GENEID',
+                     column = 'SYMBOL')
+
+gene_name <- as.data.frame(gene_name)
+
+# Assuming gene_name is your data frame
+# Assuming gene_name is your data frame
+gene_name <- gene_name %>%
+  mutate(gene_name = ifelse(duplicated(gene_name) | duplicated(gene_name, fromLast = TRUE), 
+                            ifelse(duplicated(gene_name) & !duplicated(gene_name, fromLast = TRUE), 
+                                   paste0(gene_name, "-1"), 
+                                   gene_name), 
+                            gene_name))
+gene_name$gene_ids <- Gene_ID[["Gene_ID"]]
+lung_fibroblast4_filt@assays[["RNA"]]@counts@Dimnames[[1]] <- gene_name[["gene_name"]]
+
+lung_fibroblast4_filt@assays[["RNA"]]@data@Dimnames[[1]] <- gene_name[["gene_name"]]
+
+```
+
+
+## Plotting top 10 variable features in the cells
+```{r}
+
+rownames(lung_fibroblast4_filt@assays$RNA@meta.features) <- gene_name[["gene_name"]]
+
+#Selecting highly variable features - high cell to cell variation
+lung_fibroblast4_filt <- FindVariableFeatures(lung_fibroblast4_filt, selection.method ="vst", nfeatures=2000)
+#Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(lung_fibroblast4_filt), 10)
+top10
+plot3 <- VariableFeaturePlot(lung_fibroblast4_filt)
+#Plot variable features with labels
+plot4 <- LabelPoints(plot=plot3, points = top10, repel=TRUE)
+plot4
+
+ggsave(
+  "variablefeatures.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+```
+## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
+```{r}
+all.genes <- rownames(lung_fibroblast4_filt)
+lung_fibroblast4_filt <- ScaleData(lung_fibroblast4_filt, features = all.genes)
+
+#Performing a PCA
+lung_fibroblast4_filt <- RunPCA(lung_fibroblast4_filt, features=VariableFeatures(object = lung_fibroblast4_filt))
+
+#Plotting the PCA
+PCA_no_label <- DimPlot(lung_fibroblast4_filt, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
+PCA_age_or_mean_of_age_range_label <- DimPlot(lung_fibroblast4_filt, reduction = "pca", seed = 123, group.by = "age_or_mean_of_age_range")
+
+PCA_no_label
+PCA_age_or_mean_of_age_range_label
+```
+
+
+## Heatmaps to investigate the genes influencing the top PCs
+```{r}
+DimHeatmap(lung_fibroblast4_filt, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(lung_fibroblast4_filt, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(lung_fibroblast4_filt) 
+
+#Suggests top 10 PCs explain most of the variance. Test this with jackstraw plot
+#hdfseurat_jackstraw <- JackStraw(lung_fibroblast4_filt, num.replicate = 100)
+#hdfseurat_jackstraw <- ScoreJackStraw(hdfseurat_jackstraw, dims = 1:20)
+#JackStrawPlot(hdfseurat_jackstraw, dims = 1:15)
+```
+
+## Clustering the cells using KNN
+```{r}
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+lung_fibroblast4_filt <- FindNeighbors(lung_fibroblast4_filt, dims =1:10)
+
+#group cells using findclusters function
+lung_fibroblast4_filt <- FindClusters(lung_fibroblast4_filt, resolution = 0.4)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(lung_fibroblast4_filt), 5)
+```
+
+## Plot UMAP
+```{r}
+#Running a UMAP
+lung_fibroblast4_filt <- RunUMAP(lung_fibroblast4_filt, dims=1:10)
+
+
+#Plotting UMAP with cluster IDs
+DimPlot(lung_fibroblast4_filt, reduction = "umap", seed = 123 ) 
+
+ggsave(
+  "UMAP_clusters.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+
+#Colouring above UMAP plot with age_or_mean_of_age_range type
+DimPlot(lung_fibroblast4_filt, reduction = "umap",group.by = "age_or_mean_of_age_range") 
+ggsave(
+  "UMAP_age_or_mean_of_age_rangecolour.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+```
+
+```{r}
+query <- scPredict(lung_fibroblast4_filt, hdf_mda3D)
+# Extract metadata for further analysis
+  query2 <- query@meta.data
+  table <- table(query2[, c("age_or_mean_of_age_range", "scpred_prediction")])
+  mat <- as.data.frame.matrix(table)
+  
+  # Calculate percentages and create barplot
+  percentages <- (mat / rowSums(mat)) * 100
+  percentages <- na.omit(percentages)
+  percentages <- percentages[order(row.names(percentages)), ]
+  v <- rownames(percentages)
+  
+  # Create barplot
+  barplot_data <- percentages$DS3D
+  barplot_names <- v
+  
+  barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue",
+          main = "Percentage of predicted deeply senescent cells", xlab = "Age",
+          ylab = "Percentage", ylim = c(0, 100))
+  
+
+library(ggplot2)
+library(ggpubr)  # For statistical annotations
+
+  # Extract the first column of the percentages dataframe
+percent_DS <- percentages[, 1]
+
+# Extract the row names of the percentages dataframe
+age <- rownames(percentages)
+
+result <- data.frame(age = age, percent_DS = percent_DS)
+
+result$age <- as.numeric(result$age)
+
+# Assuming data is your long-format data frame
+library(ggplot2)
+
+# Create a scatterplot 
+p <- ggplot(result, aes(x = age, y = percent_DS)) +
+  geom_point(size = 3, color = "blue") +  # Make points larger and blue
+  geom_smooth(method = "lm", se = FALSE, color = "black", size = 0.7) +  # Make trendline slightly thinner
+  labs(title = NULL, x = "Age", y = "Percentage DS predicted cells") +
+  theme_minimal() +
+  theme(panel.grid = element_blank())  # Remove gridlines
+
+
+# Extract R-squared and p-values
+cor_coef <- cor.test(merged_long$age, merged_long$value, method = "pearson")
+pearson_cor <- sprintf("Pearson correlation = %.3f", cor_coef$estimate)
+pval <- sprintf("p = %.3f", cor_coef$p.value)
+
+# Add R-squared and p-values as text
+p + 
+  geom_text(x = max(result$age), y = min(result$percent_DS), label = paste(pearson_cor, pval, sep = ", "), hjust = 1, vjust = -1) +
+  custom_theme(base_size=20)
+
+ggsave(
+  "scatterplot_3D_lungs.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+
+```
+
+
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.
