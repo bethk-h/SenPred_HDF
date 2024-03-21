@@ -2,12 +2,16 @@
 title: "7_Teo"
 author: "BH"
 date: "2024-03-15"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
-## Loading barcodes and conditions, and counts matrix for publicly available paper: Teo, Y.V., Rattanavirotkul, N., Olova, N., Salzano, A., Quintanilla, A., Tarrats, N., Kiourtis, C., Müller, M., Green, A.R., Adams, P.D. and Acosta, J.C., 2019. Notch signaling mediates secondary senescence. Cell reports, 27(4), pp.997-1007.
+# Investigating performance of EP/ES/DS SenPred 2D classifier on publicly available paper: Teo, Y.V., Rattanavirotkul, N., Olova, N., Salzano, A., Quintanilla, A., Tarrats, N., Kiourtis, C., Müller, M., Green, A.R., Adams, P.D. and Acosta, J.C., 2019. Notch signaling mediates secondary senescence. Cell reports, 27(4), pp.997-1007.
 
 This will allow the model to be tested on an alternative trigger: Oncogene Induced Senescence (OIS/RIS), and paracrine senescence (GFP).
 
+## Loading data
 ```{r}
 #install.packages("GEOquery")
 library(GEOquery)
@@ -63,7 +67,7 @@ ggsave(
   path = "../Output/Teo_QC"
   )
 ```
-
+## Number of UMIs per cell
 ```{r}
 #Number of UMIs (transcripts) per cell
 Teo_UMI <- Teo_seurat@meta.data %>% 
@@ -86,7 +90,7 @@ ggsave(
   )
 ```
 
-
+## Distribution of genes per cell
 ```{r}
 # Visualize the distribution of genes detected per cell via histogram
 Teo_features <- Teo_seurat@meta.data %>% 
@@ -155,7 +159,7 @@ ggsave(
   )
 ```
 
-
+## Mitochondrial gene expression distribution
 ```{r}
 # Visualize the distribution of mitochondrial gene expression detected per cell
 percentmt_Teo<- Teo_seurat@meta.data %>% 
@@ -177,7 +181,7 @@ ggsave(
   )
 ```
 
-
+## Log10 genes per UMI
 ```{r}
 #Log10 genes per UMI
 teo_log10umi <- Teo_seurat@meta.data %>%
@@ -205,6 +209,8 @@ To remove potentially apoptotic or 'low quality' cells we discarded cells with l
 nCount_RNA > 1000
 nFeature_RNA > 400
 percent.mt <= 12
+
+# Subsetting seurat object, and normalising
 ```{r}
 Teo_seurat2 <- subset(x=Teo_seurat, 
                            subset= (percent.mt <=12) &
@@ -219,7 +225,7 @@ ggplot(dat, aes(x=values, fill=ind)) + geom_bar(position="dodge")
 #LogNormalize data
 Teo_seurat2 <- NormalizeData(Teo_seurat2)
 ```
-
+# Identifying highly variable features
 ```{r}
 #Selecting highly variable features - high cell to cell variation
 Teo_seurat2 <- FindVariableFeatures(Teo_seurat2, selection.method ="vst", nfeatures=2000)
@@ -239,7 +245,7 @@ plot1
 plot2
 
 ```
-
+##Scaling for dimensionality reduction
 
 ```{r}
 #Scaling for dimensionality reduction
@@ -276,6 +282,7 @@ Teo_seurat2 <- FindClusters(Teo_seurat2, resolution = 0.4)
 #Look at cluster ID's of first 5 cells
 head(Idents(Teo_seurat2), 5)
 ```
+## Running UMAP
 ```{r}
 #Running a UMAP
 Teo_seurat2 <- RunUMAP(Teo_seurat2, dims=1:10)
@@ -303,7 +310,7 @@ ggsave(
   )
 ```
 
-##Running SenPred 2D EP/ES/DS on Teo data
+#Running SenPred 2D EP/ES/DS on Teo data
 ```{r}
 query <- NormalizeData(Teo_seurat2)
 query <- scPredict(query, HDF_Chan_combined_scPred)
@@ -324,7 +331,7 @@ ggsave(
   )
 
 ```
-Extracting percentage predictions for Teo data
+##Extracting percentage predictions for Teo data
 ```{r}
 query2 <- query@meta.data
 table <- table(query2[, c("Condition2.x", "scpred_prediction")])

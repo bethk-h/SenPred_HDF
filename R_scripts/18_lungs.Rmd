@@ -1,8 +1,11 @@
 ---
-title: "Untitled"
+title: "18_lungs"
 author: "BH"
 date: "2024-02-23"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
 # To test SenPred on fibroblasts from another tissue, the lung, I extracted data from the human cell atlas using the following paper:
 Sikkema, L., Ramírez-Suástegui, C., Strobl, D.C., Gillett, T.E., Zappia, L., Madissoon, E., Markov, N.S., Zaragosi, L.E., Ji, Y., Ansari, M. and Arguel, M.J., 2023. An integrated cell atlas of the lung in health and disease. Nature Medicine, 29(6), pp.1563-1577.

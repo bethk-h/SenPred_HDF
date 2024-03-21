@@ -2,10 +2,13 @@
 title: "5_ScPred2D_Chan"
 author: "BH"
 date: "2023-01-24"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
 
-## Testing ML models on external replicative senescence fibroblast single cell RNA seq data set from Chan et al. (Chan, M., Yuan, H., Soifer, I., Maile, T.M., Wang, R.Y., Ireland, A., O'Brien, J.J., Goudeau, J., Chan, L.J., Vijay, T. and Freund, A., 2022. Novel insights from a multiomics dissection of the Hayflick limit. Elife, 11, p.e70283.). 
+# Testing ML models on external replicative senescence fibroblast single cell RNA seq data set from Chan et al. (Chan, M., Yuan, H., Soifer, I., Maile, T.M., Wang, R.Y., Ireland, A., O'Brien, J.J., Goudeau, J., Chan, L.J., Vijay, T. and Freund, A., 2022. Novel insights from a multiomics dissection of the Hayflick limit. Elife, 11, p.e70283.). 
 
 ```{r}
 # Load RDS
@@ -44,6 +47,7 @@ ggsave(
   )
 
 ```
+
 ## Visualising the number of UMIs per cell (nCount_RNA)
 
 ```{r}
@@ -66,6 +70,7 @@ ggsave(
 
 
 ```
+
 ## Visualising number of genes per cell (nFeature_RNA)
 ```{r}
 # Visualize the distribution of genes detected per cell via histogram
@@ -101,6 +106,7 @@ ggsave(
   path = "../Output/Chan"
   )
 ```
+
 ## Combining number of genes, UMIs and mitochondrial percentage, to show thresholding boundaries
 ```{r}
 Chan_seurat@meta.data %>% 
@@ -123,6 +129,7 @@ ggsave(
   path = "../Output/Chan"
   )
 ```
+
 ## Mitochondrial gene expression per cell
 
 ```{r}
@@ -142,6 +149,7 @@ ggsave(
   path = "../Output/Chan"
   )
 ```
+
 ## Visualising the proportion of genes per UMI
 ```{r}
 #Genes per UMI
@@ -151,6 +159,7 @@ Chan_seurat@meta.data %>%
   	theme_classic() +
   	geom_vline(xintercept = 0.8)
 ```
+
 #Subsetting seurat object
 ```{r}
 Chan_seurat2 <- subset(x=Chan_seurat, 
@@ -184,7 +193,7 @@ ggsave(
 
 ```
 
-## Finding top variable genes within the dataset
+# Finding top variable genes within the dataset
 
 ```{r}
 #Selecting highly variable features - high cell to cell variation
@@ -213,7 +222,7 @@ ggsave(
   )
 ```
 
-## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
+# Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
 ```{r}
 all.genes <- rownames(Chan_seurat2)
 Chan_seurat2 <- ScaleData(Chan_seurat2, features = all.genes)
@@ -289,7 +298,7 @@ ggsave(
   )
 ```
 
-##Testing ScPred 2D ML models on Chan datasets
+#Testing ScPred 2D ML models on Chan datasets
 ```{r}
 #MDA radial model
 query <- NormalizeData(Chan_seurat2)
@@ -345,7 +354,8 @@ barplot(barplot_data, names = barplot_names, cex.names = 1.8, cex.axis = 1.7, ce
 dev.off()  # Turn off the PNG device
 
 ```
-##Subsetting and clustering just PDL_50
+
+#Subsetting and clustering just PDL_50
 ```{r}
 Chan_PDL50 <- subset(Chan_seurat2, PDL == "PDL_50")
 #Selecting highly variable features - high cell to cell variation
@@ -467,7 +477,7 @@ dev.off()
 
 ```
 
-Using monocle trajectory analysis on the PDL50 cells 
+##Using monocle trajectory analysis on the PDL50 cells 
 ```{r}
 library(monocle3)
 library(SeuratWrappers)

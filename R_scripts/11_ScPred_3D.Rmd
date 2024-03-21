@@ -1,16 +1,19 @@
 ---
-title: "ScPred_3D"
+title: "11_ScPred_3D"
 author: "BH"
 date: '2022-04-22'
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
 
-## Filtering Seurat to select just 3D cells for clustering 
+# Filtering Seurat to select just 3D cells for clustering 
 ```{r}
 hdfseurat_filt_3D <- subset(hdfseurat_filt, Sample == "DS3D" | Sample == "EP3D")
 ```
 
-## Plotting top 10 variable features in the 3D cells
+# Plotting top 10 variable features in the 3D cells
 ```{r}
 #Selecting highly variable features - high cell to cell variation
 hdfseurat_filt_3D <- FindVariableFeatures(hdfseurat_filt_3D, selection.method ="vst", nfeatures=2000)
@@ -30,7 +33,7 @@ ggsave(
   )
 ```
 
-## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
+# Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
 ```{r}
 all.genes <- rownames(hdfseurat_filt_3D)
 hdfseurat_filt_3D <- ScaleData(hdfseurat_filt_3D, features = all.genes)
@@ -95,7 +98,7 @@ ggsave(
   path = "../Output/HDF_Data_Analysis"
   )
 ```
-## Finding cluster biomarkers
+# Finding cluster biomarkers
 ```{r}
 #Find markers for every cluster compared to all remaining cells, report only the positive ones
 hdfseurat.markers <- FindAllMarkers(hdfseurat_filt_3D, only.pos=FALSE, min.pct=0.25, logfc.threshold=0.25)
@@ -103,7 +106,7 @@ hdfseurat.markers <- FindAllMarkers(hdfseurat_filt_3D, only.pos=FALSE, min.pct=0
 write.csv(hdfseurat.markers,"../Output/HDF_Data_Analysis/HDF3D_clustermarkers_posandneg.csv")
 ```
 
-## Building 3D ML model using ScPred
+# Building 3D ML model using ScPred
 
 ## Seperating dataset into training and testing. 80% training, and 20% testing
 ```{r}
@@ -232,7 +235,7 @@ ggsave(
 FeaturePlot(query, c("scpred_DS3D", "scpred_EP3D"))
 ```
 
-#Confusion matrix plot
+##Confusion matrix plot
 ```{r}
 query_df <- query@meta.data
 query_df <- query_df %>%
@@ -338,7 +341,7 @@ ggsave(
 FeaturePlot(query, c("scpred_DS3D", "scpred_EP3D"))
 ```
 
-#Confusion matrix plot
+##Confusion matrix plot
 ```{r}
 query_df <- query@meta.data
 query_df <- query_df %>%

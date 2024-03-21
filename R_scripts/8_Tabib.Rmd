@@ -1,9 +1,14 @@
 ---
-title: "Tabib"
+title: "8_Tabib"
 author: "BH"
 date: '2022-04-25'
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
+# Loading in whole skin scRNA sequencing dataset from Tabib et al, to test the 2D SenPred model. 
+Tabib, T., Morse, C., Wang, T., Chen, W. and Lafyatis, R., 2018. SFRP2/DPP4 and FMO1/LSP1 define major fibroblast populations in human skin. Journal of Investigative Dermatology, 138(4), pp.802-810.
 ```{r}
 Tabib <- readRDS("../Inputfiles/Tabib_SeuratObject_AD23-Clusters (1).rds")
 Idents(object = Tabib) <- Tabib$Tabib_name
@@ -11,11 +16,11 @@ Idents(object = Tabib) <- Tabib$Tabib_name
 #Extracting just the fibroblasts
 Tabib_fibs <- subset(x = Tabib, idents = c("0_Fibroblast", "3_Fibroblast", "4_Fibroblast"))
 ```
+
 ## Applying same QC metrics as my data to test for outliers. 
 nCount_RNA > 1000
 nFeature_RNA > 400
 percent.mt <= 12
-
 
 ```{r}
 #Adding mitochondrial percentage and number of genes per UMI
@@ -188,7 +193,7 @@ ggsave(
 Tabib_fibs2 <- NormalizeData(Tabib_fibs2)
 ```
 
-## Finding top variable genes within the dataset
+# Finding top variable genes within the dataset
 
 ```{r}
 #Selecting highly variable features - high cell to cell variation
@@ -291,7 +296,7 @@ ggsave(
   )
 ```
 
-##Testing ScPred 2D ML models on Chan datasets
+#Testing ScPred 2D EP/DS ML models on Tabib dataset
 ```{r}
 #MDA radial model
 query <- NormalizeData(Tabib_fibs2)
@@ -393,34 +398,8 @@ ggsave(
   )
 ```
 
-## Investigating the percentage of DS predicted cells per age
 
-```{r}
-query2 <- querytabib@meta.data
-table <- table(query2[, c("age", "scpred_prediction")])
-table
-mat <- as.data.frame.matrix(table)
-mat
-
-percentages <- (mat/rowSums(mat))*100
-percentages
-percentages <- na.omit(percentages)
-percentages
-as.matrix(percentages)
-percentages <- percentages[ order(row.names(percentages)), ]
-v <- rownames(percentages)
-
-
-barplot_data <- percentages$DS2D
-barplot_names <- v
-
-png(filename = "../Output/Tabib/scPred2D_Tabib_barplot_percentageDS.png", width = 800, height = 600)  # Set appropriate width and height
-barplot(barplot_data, names = barplot_names, cex.names = 1.8, cex.axis = 1.7, cex.lab = 1.7, cex.main=2.5, col = "darkblue", main = "Percentage of predicted deeply senescent cells", xlab="Population Doublings",
-         ylab = "Percentage", ylim = c(0, 100))
-dev.off() 
-
-```
-## Investigating the percentage of DS predicted cells per age
+## Investigating the percentage of EP/ES/DS predicted cells per age
 
 ```{r}
 query2 <- query@meta.data

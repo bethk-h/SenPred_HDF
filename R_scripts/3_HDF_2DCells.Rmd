@@ -2,15 +2,18 @@
 title: "3_HDF_2DCells"
 author: "Beth"
 date: "24/09/2021"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
 
-## Filtering Seurat to select just 2D cells for clustering 
+# Filtering Seurat to select just 2D cells for clustering 
 ```{r}
 hdfseurat_filt_2D <- subset(hdfseurat_filt, Sample == "DS2D" | Sample == "EP2D")
 ```
 
-## Plotting top 10 variable features in the 2D cells
+# Plotting top 10 variable features in the 2D cells
 ```{r}
 #Selecting highly variable features - high cell to cell variation
 hdfseurat_filt_2D <- FindVariableFeatures(hdfseurat_filt_2D, selection.method ="vst", nfeatures=2000)
@@ -29,7 +32,7 @@ ggsave(
   path = "../Output/HDF_Data_Analysis"
   )
 ```
-## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
+# Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
 ```{r}
 all.genes <- rownames(hdfseurat_filt_2D)
 hdfseurat_filt_2D <- ScaleData(hdfseurat_filt_2D, features = all.genes)

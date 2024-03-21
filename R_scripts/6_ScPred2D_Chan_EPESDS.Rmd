@@ -2,7 +2,10 @@
 title: "6_ScPred2D_Chan_EPESDS"
 author: "BH"
 date: '2022-11-15'
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
 ```{r load_packages}
 library("dplyr")
@@ -27,6 +30,7 @@ options(future.globals.maxSize = 12000 * 1024^2)
 
 ```
 
+# Building 'Early Senescent' PDL50 cells into the model as an additional classifier
 
 ```{r}
 #Subsetting PDL50 'early senescent' cells
@@ -124,6 +128,7 @@ HDF_Chan_combined <- FindClusters(HDF_Chan_combined, resolution = 0.7)
 head(Idents(HDF_Chan_combined), 5)
 ```
 
+## Run UMAPS
 ```{r}
 #Running a UMAP
 HDF_Chan_combined <- RunUMAP(HDF_Chan_combined, dims=1:10)
@@ -210,7 +215,7 @@ ggsave("../Output/Early_senescence/pseudotimetrajectory.png", plot, width = 8, h
 ```
 
 
-Building an MDA model including the third 'ES' classifier
+# Building an MDA model including the third 'ES' classifier
 ```{r}
 HDF_Chan_combined$new_col <- NULL
 #HDF_Chan_combined$New_Col <- NULL
@@ -268,7 +273,7 @@ get_scpred(HDF_Chan_combined_scPred)
 HDF_Chan_combined_scPred
 ```
 
-
+## Model testing
 ```{r}
 #MDA testing 
 query <- scPredict(testing, HDF_Chan_combined_scPred, recompute_alignment = FALSE)
@@ -422,6 +427,7 @@ output_file_path <- "../Output/Early_senescence/CM2D_MDA_testing.png"
 draw_confusion_matrix(your_confusion_matrix, output_file_path)
 
 ```
+
 # Running ES model on whole Chan dataset
 
 ```{r}

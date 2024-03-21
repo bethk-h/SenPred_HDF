@@ -1,11 +1,14 @@
 ---
-title: "10_3Dpred_Tabib"
+title: "12_3Dpred_Tabib"
 author: "BH"
 date: "2023-03-09"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
 
-##Testing ScPred 3D ML MDA model on Tabib datasets
+#Testing ScPred 3D ML MDA model on Tabib datasets
 ```{r}
 #MDA radial model
 querytabib3D <- NormalizeData(Tabib_fibs2)

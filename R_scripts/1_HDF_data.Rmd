@@ -3,9 +3,10 @@ title: "1_HDF_data"
 author: "Bethany Hughes"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
-  rmarkdown::html_document:
-    toc: TRUE
-  
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
+   
 ---
 
 ## Install/Load dependencies:
@@ -34,7 +35,9 @@ list.files(data_dir)
 hdf.data <- Read10X(data.dir=data_dir, gene.column=2, cell.column=1, strip.suffix=TRUE)
 ```
 
-## Inputting file which matches barcode identities with input sample identity (e.g. EP/DS/Mix) [All Data Transcript Counts_cell_annotations.csv](../Input/All Data Transcript Counts_cell_annotations.csv)
+## Inputting file which matches barcode identities with input sample identity (e.g. EP/DS/Mix) 
+
+[All Data Transcript Counts_cell_annotations.csv](../Input/All Data Transcript Counts_cell_annotations.csv)
 ```{r}
 cell_labels<-read.csv("../Inputfiles/All Data Transcript Counts Cleaned_suffixes.csv",header=FALSE)
 cell_labels<-as.data.frame(t(cell_labels))
@@ -50,7 +53,7 @@ colnames(rawUMI_cols)[1]<-"Barcode"
 cells_with_metadata<-merge(rawUMI_cols,cell_labels,by="Barcode")
 ```
 
-## Creating Seurat object
+# Creating Seurat object
 ```{r}
 hdfseurat <- CreateSeuratObject(counts = hdf.data, project = "MachineLearningSenescence", min.cells=3, min.features=200)
 hdfseurat
@@ -92,7 +95,7 @@ hdfseurat <- CreateSeuratObject(counts = hdf.data, project = "MachineLearningSen
 
 ```
 
-### Session information
+# Session information
 ```{r session_info_99}
 sessionInfo()
 ```

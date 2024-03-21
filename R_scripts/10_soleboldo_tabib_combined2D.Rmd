@@ -1,10 +1,13 @@
 ---
-title: "Soleboldo_tabib_combined2"
+title: "10_Soleboldo_tabib_combined2"
 author: "BH"
 date: "2024-03-09"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
-##Integrate Tabib and Sole seurat objects which contain 2D EP/ES/DS senpred predictions 
+#Integrate Tabib and Sole seurat objects which contain 2D EP/ES/DS senpred predictions 
 ```{r}
 list <- list(querytabib, querysole)
 
@@ -55,6 +58,8 @@ seurat_integrated <- IntegrateData(anchorset = integ_anchors,
 
 ```
 
+
+##Select highly variable features
 ```{r}
 #Selecting highly variable features - high cell to cell variation
 seurat_integrated <- FindVariableFeatures(seurat_integrated, selection.method ="vst", nfeatures=2000)
@@ -74,6 +79,7 @@ ggsave(
   )
 ```
 
+## Perform PCA
 ```{r}
 all.genes <- rownames(seurat_integrated)
 seurat_integrated <- ScaleData(seurat_integrated, features = all.genes)
@@ -142,7 +148,8 @@ ggsave(
   )
 
 ```
-##Finding percentage prediction for each donor age
+
+##Finding percentage prediction of EP/ES/DS for each donor age
 ```{r}
 seurat_integrated2 <- seurat_integrated@meta.data
 table <- table(seurat_integrated2[, c("age", "scpred_prediction")])

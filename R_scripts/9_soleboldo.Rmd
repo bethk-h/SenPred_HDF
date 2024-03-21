@@ -1,9 +1,15 @@
 ---
-title: "Sole boldo"
+title: "9_Sole boldo"
 author: "BH"
 date: '2022-06-23'
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
+
+# Loading in second whole skin scRNA sequencing dataset from Sole-Boldo et al, to test the 2D SenPred model. 
+Solé-Boldo, L., Raddatz, G., Schütz, S., Mallm, J.P., Rippe, K., Lonsdorf, A.S., Rodríguez-Paredes, M. and Lyko, F., 2020. Single-cell transcriptomes of the human skin reveal age-related loss of fibroblast priming. Communications biology, 3(1), p.188.
 
 ```{r}
 Sole <- readRDS("../Inputfiles/Sole-Boldo_SeuratObject_New-AD21-Clusters.rds")
@@ -191,7 +197,7 @@ Sole_fibs2 <- NormalizeData(Sole_fibs2)
 
 ```
 
-## Finding top variable genes within the dataset
+# Finding top variable genes within the dataset
 
 ```{r}
 #Selecting highly variable features - high cell to cell variation
@@ -295,7 +301,7 @@ ggsave(
   )
 ```
 
-##Testing ScPred 2D MDA ML model on Chan datasets
+#Testing ScPred 2D MDA EP/DS ML model on SoleBoldo datasets
 ```{r}
 #MDA radial model
 query <- NormalizeData(Sole_fibs2)
@@ -365,7 +371,7 @@ ggsave("barplot_stacked_2Dpred_age.tiff",
   )
 
 ```
-## Testing EP/ES/DS model
+# Testing EP/ES/DS model
 ```{r}
 #MDA radial model
 querysole <- NormalizeData(Sole_fibs2)

@@ -1,8 +1,11 @@
 ---
-title: "15_Ganier"
+title: "16_Ganier"
 author: "BH"
 date: "2024-03-21"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
 ---
 title: "Ganier"
@@ -10,9 +13,11 @@ author: "BH"
 date: "2024-01-15"
 output: html_document
 ---
-#Loading in multiple donor runs and generating seurat objects. This data was downloaded from ArrayExpress under “E- MTAB- 13085”, from the following paper:
+
+# Adding an additional whole skin dataset from Ganier et al. This data was downloaded from ArrayExpress under “E- MTAB- 13085”, from the following paper:
 Ganier, C., Mazin, P., Herrera-Oropeza, G., Du-Harpur, X., Blakeley, M., Gabriel, J., Predeus, A.V., Cakir, B., Prete, M., Harun, N. and Darrigrand, J.F., 2024. Multiscale spatial mapping of cell populations across anatomical sites in healthy human skin and basal cell carcinoma. Proceedings of the National Academy of Sciences, 121(2), p.e2313326120.
 
+## Loading in multiple donor runs
 ```{r}
 Ganier <- Read10X(data.dir= "../Inputfiles/Ganier/WS_SKN_KCL9369529/filtered_feature_bc_matrix")
 KCL9369529 <- CreateSeuratObject(counts = Ganier, min.cells = 3, min.features = 200)
@@ -280,7 +285,7 @@ KCL10525741 <- AddMetaData(KCL10525741, Meta)
 
 ##Preprocessing steps
 
-## Cell-level filtering
+### Cell-level filtering
 See: [https://hbctraining.github.io/scRNA-seq_online/lessons/04_SC_quality_control.html](https://hbctraining.github.io/scRNA-seq_online/lessons/04_SC_quality_control.html)
 
 Now that we have visualized the various metrics, we can decide on the thresholds to apply which will result in the removal of low quality cells. 
@@ -391,7 +396,7 @@ processed_seurat_list <- lapply(list, preprocess_seurat_object)
 
 
 ```
-
+### Normalisation
 ```{r}
 library(Seurat)
 library(ggplot2)
@@ -424,7 +429,7 @@ process_seurat_list <- function(seurat_list, output_path = "../Output/Ganier") {
 processed_seurat_list <- process_seurat_list(processed_seurat_list)
 
 ```
-
+## Select highly variable features, scale, and perform PCA and UMAP dimensionality reduction
 ```{r}
 library(Seurat)
 library(ggplot2)
@@ -583,7 +588,7 @@ print(Ganier_integrated)
 
 ```
 
-
+## Selecting highly variable features
 ```{r}
 #Selecting highly variable features - high cell to cell variation
 Ganier_integrated <- FindVariableFeatures(Ganier_integrated, selection.method ="vst", nfeatures=2000)
@@ -659,7 +664,7 @@ ggsave(
 
 ```
 
-## Looking at list of predefined genes by Ganier et al. to identify fibroblast cluster
+# Looking at list of predefined genes by Ganier et al. to identify fibroblast cluster
 
 ```{r}
   features_to_plot <- c("SARAF", "RORA", "CCL5", "NKG7", "APOD", "APOE", "CD69", "TNF", "CTLA4", "TIGIT", "C1QA", "CCL3", "HLA-DRA", "LYZ", "SFRP2", "WISP2", "TAGLN", "MYL9", "POSTN", "COL3A1", "RGS5", "STEAP4", "TM4SF1", "IFI27", "PTPRC", "SRSF7", "XCL1", "XCL2", "LY6D", "KRT1", "CD37", "BANK1", "KRT17", "PTCH1", "IL1B", "CXCL8", "TPSB2", "KIT", "PMEL", "TRYP1", "ACAN", "COL2A1", "CST3", "CPVL", "CCL21", "MMRN1", "JCHAIN", "IGHA1", "PTGDS", "ASPN", "CCL17", "CCL22", "IL8", "FCER1A", "CDH19", "SCN7A", "ACTA2", "DES", "MYLPF", "MYL1")
@@ -705,7 +710,7 @@ Ganier_fibs <- subset(Ganier_integrated, cells = which(Ganier_integrated@meta.da
 saveRDS(Ganier_fibs, file = "../Output/Ganier/ganier_fibs.rds")
 ```
 
-# clustering the fibroblasts alone
+# Clustering the fibroblasts alone
 
 ## Finding top variable genes within the dataset
 
@@ -810,7 +815,7 @@ ggsave(
   )
 ```
 
-##Testing ScPred 3D ML models on Ganier datasets
+#Testing ScPred 3D ML models on Ganier datasets
 ```{r}
 #MDA radial model
 queryGanier <- NormalizeData(Ganier_fibs)

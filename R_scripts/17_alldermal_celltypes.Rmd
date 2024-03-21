@@ -2,7 +2,10 @@
 title: "17_alldermal_celltypes"
 author: "BH"
 date: "2024-03-21"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
 
 #Testing the 3D model in all cell types from the dermis (not just fibroblasts)

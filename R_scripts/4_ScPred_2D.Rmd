@@ -2,9 +2,12 @@
 title: "4_ScPred_2D"
 author: "BH"
 date: '2022-03-23'
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
-## Building machine learning models of proliferative and senescent HDFs in 2D, using ScPred package (see https://github.com/powellgenomicslab/scPred)
+# Building machine learning models of proliferative and senescent HDFs in 2D, using ScPred package (see https://github.com/powellgenomicslab/scPred)
 
 ## Loading libraries
 ```{r}
@@ -149,7 +152,8 @@ ggsave(
   )
 FeaturePlot(query, c("scpred_DS2D", "scpred_EP2D"))
 ```
-#Confusion matrix plot
+
+##Confusion matrix plot
 ```{r}
 query_df <- query@meta.data
 query_df <- query_df %>%
@@ -241,6 +245,7 @@ draw_confusion_matrix(your_confusion_matrix, output_file_path)
 
 
 ```
+
 #Testing MDA model
 ```{r}
 #SVM testing 
@@ -267,7 +272,8 @@ ggsave(
   )
 FeaturePlot(query, c("scpred_DS2D", "scpred_EP2D"))
 ```
-#Confusion matrix plot
+
+##Confusion matrix plot
 ```{r}
 query_df <- query@meta.data
 query_df <- query_df %>%

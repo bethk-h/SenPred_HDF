@@ -1,11 +1,14 @@
 ---
-title: "11_3Dpred_SoleBoldo"
+title: "13_3Dpred_SoleBoldo"
 author: "BH"
 date: "2023-03-09"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
 
-##Testing ScPred 3D ML models on Sole-Boldo datasets
+# Testing ScPred 3D ML models on Sole-Boldo datasets
 ```{r}
 #MDA radial model
 querysole3D <- NormalizeData(Sole_fibs2)

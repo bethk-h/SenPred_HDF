@@ -1,10 +1,13 @@
 ---
-title: "Matrisome"
+title: "15_Matrisome"
 author: "BH"
 date: "2024-02-07"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
-## Matrisome genes were imported from the Matrisome project: https://sites.google.com/uic.edu/matrisome/home?authuser=0
+# Matrisome genes were imported from the Matrisome project: https://sites.google.com/uic.edu/matrisome/home?authuser=0
 The genes imported were the NABA_MATRISOME human gene set. 
 
 ```{r}
@@ -149,6 +152,7 @@ print(merged_df)
 
 ```
 
+# Generating a correlation matrix of median matrisome gene counts
 ```{r}
 # Load required libraries
 library(gplots)

@@ -2,9 +2,12 @@
 title: "14_soleboldo_tabib_combined3D"
 author: "BH"
 date: "2024-03-21"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    toc: yes
 ---
-
+#Integrate Tabib and Sole seurat objects which contain 3D EP/DS senpred predictions 
 ```{r}
 list <- list(querytabib3D, querysole3D)
 
@@ -55,6 +58,7 @@ seurat_integrated_3D <- IntegrateData(anchorset = integ_anchors,
 
 ```
 
+#Select highly variable features
 ```{r}
 #Selecting highly variable features - high cell to cell variation
 seurat_integrated_3D <- FindVariableFeatures(seurat_integrated_3D, selection.method ="vst", nfeatures=2000)
@@ -73,7 +77,7 @@ ggsave(
   path = "../Output/TabibSole_integrated"
   )
 ```
-
+#Scale and perform PCA
 ```{r}
 all.genes <- rownames(seurat_integrated_3D)
 seurat_integrated_3D <- ScaleData(seurat_integrated_3D, features = all.genes)
@@ -147,7 +151,7 @@ DimPlot(seurat_integrated_3D, reduction = "umap",group.by = "age", seed=123)
 DimPlot(seurat_integrated_3D, reduction = "umap",group.by = "age_group", seed=123) 
 
 ```
-## Generating a correlation matrix of a panel of selected senescence genes
+# Generating a correlation matrix of a panel of selected senescence genes - DS predicted cells
 ```{r}
 # Subset the Seurat object based on scpred_prediction
 filtered_seurat <- subset(seurat_integrated_3D, subset = scpred_prediction == "DS3D")
@@ -211,7 +215,7 @@ ggsave(
   )
 
 ```
-## Generating a correlation matrix of a panel of selected senescence genes - EP
+# Generating a correlation matrix of a panel of selected senescence genes - EP predicted cells
 ```{r}
 # Subset the Seurat object based on scpred_prediction
 filtered_seurat_EP <- subset(seurat_integrated_3D, subset = scpred_prediction == "EP3D")
@@ -272,8 +276,8 @@ ggsave(
   path = "../Output/TabibSole_Integrated"
   )
 ```
-## Extract example correlation plots
-#CDKN1A vs CDKN2A
+# Extract example correlation plots
+## CDKN1A vs CDKN2A
 ```{r}
 # Extract counts for CDKN1A and CDKN2A from Seurat object - DS only
 CDKN1A_counts <- filtered_seurat@assays$RNA@data["CDKN1A", ]
@@ -352,7 +356,7 @@ ggsave(
 
 ```
 
-#IL6 vs IL8
+##IL6 vs IL8
 ```{r}
 # Extract counts for IL6 and IL8 from Seurat object - DS
 IL6_counts <- filtered_seurat@assays$RNA@data["IL6", ]
@@ -424,7 +428,7 @@ ggsave(
   path = "../Output/TabibSole_Integrated"
   )
 ```
-#IGFBP3 vs TP53
+##IGFBP3 vs TP53
 ```{r}
 # Extract counts for IGFBP3 and TP53 from Seurat object - DS
 IGFBP3_counts <- filtered_seurat@assays$RNA@data["IGFBP3", ]
