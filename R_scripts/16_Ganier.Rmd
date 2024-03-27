@@ -398,6 +398,8 @@ preprocess_seurat_object <- function(seurat_object, output_path = "../Output/Gan
 processed_seurat_list <- lapply(list, preprocess_seurat_object)
 
 
+# Removing duplicate donor samples
+processed_seurat_list <- processed_seurat_list[-c(1, 6)]
 
 ```
 ### Normalisation
@@ -435,70 +437,78 @@ processed_seurat_list <- process_seurat_list(processed_seurat_list)
 ```
 ## Select highly variable features, scale, and perform PCA and UMAP dimensionality reduction
 ```{r}
-library(Seurat)
-library(ggplot2)
-
-# Define a function for further analysis on processed Seurat objects
 analyze_seurat_object <- function(seurat_object, output_path = "../Output/Ganier") {
-  age <- seurat_object@meta.data$age[1]
+  # Extract unique ages from the metadata
+  unique_ages <- unique(seurat_object@meta.data[["age"]])
+  print("Unique ages in the metadata:")
+  print(unique_ages)
+  
+  # Loop over unique ages
+  for (age in unique_ages) {
+    print(paste("Processing Seurat object with age:", age))
 
-  # Selecting highly variable features
-  seurat_object <- FindVariableFeatures(seurat_object, selection.method = "vst", nfeatures = 2000)
-  top10 <- head(VariableFeatures(seurat_object), 10)
-  plot3 <- VariableFeaturePlot(seurat_object)
-  plot4 <- LabelPoints(plot = plot3, points = top10, repel = TRUE)
+    # Rest of the function remains unchanged...
+    # Selecting highly variable features
+    seurat_object <- FindVariableFeatures(seurat_object, selection.method = "vst", nfeatures = 2000)
+    top10 <- head(VariableFeatures(seurat_object), 10)
+    plot3 <- VariableFeaturePlot(seurat_object)
+    plot4 <- LabelPoints(plot = plot3, points = top10, repel = TRUE)
 
-  ggsave(file.path(output_path, paste0("HDF_2D_variablefeatures_", age, ".tiff")),
-         plot = last_plot(), device = "tiff")
+    ggsave(file.path(output_path, paste0("Ganier_variablefeatures_", age, ".tiff")),
+           plot = last_plot(), device = "tiff")
+    print("Saved variable features plot.")
 
-  # Scaling the data and performing PCA
-  all_genes <- rownames(seurat_object)
-  seurat_object <- ScaleData(seurat_object, features = all_genes)
-  seurat_object <- RunPCA(seurat_object, features = VariableFeatures(object = seurat_object))
+    # Scaling the data and performing PCA
+    all_genes <- rownames(seurat_object)
+    seurat_object <- ScaleData(seurat_object, features = all_genes)
+    seurat_object <- RunPCA(seurat_object, features = VariableFeatures(object = seurat_object))
 
-  PCA_no_label <- DimPlot(seurat_object, reduction = "pca", seed = 123, combine = TRUE) + NoLegend()
-  PCA_Sample_label <- DimPlot(seurat_object, reduction = "pca", seed = 123, group.by = "age")
+    PCA_no_label <- DimPlot(seurat_object, reduction = "pca", seed = 123, combine = TRUE) + NoLegend()
+    PCA_Sample_label <- DimPlot(seurat_object, reduction = "pca", seed = 123, group.by = "age")
 
-  ggsave(file.path(output_path, paste0("PCA_no_label_", age, ".tiff")),
-         plot = PCA_no_label, device = "tiff")
-  ggsave(file.path(output_path, paste0("PCA_Sample_label_", age, ".tiff")),
-         plot = PCA_Sample_label, device = "tiff")
+    ggsave(file.path(output_path, paste0("PCA_no_label_", age, ".tiff")),
+           plot = PCA_no_label, device = "tiff")
+    ggsave(file.path(output_path, paste0("PCA_Sample_label_", age, ".tiff")),
+           plot = PCA_Sample_label, device = "tiff")
+    print("Saved PCA plots.")
 
-  # Heatmaps and Elbow Plot
-  DimHeatmap(seurat_object, dims = 1, cells = 500, balanced = TRUE)
-  DimHeatmap(seurat_object, dims = 1:15, cells = 500, balanced = TRUE)
-  ElbowPlot(seurat_object)
+    # Heatmaps and Elbow Plot
+    DimHeatmap(seurat_object, dims = 1, cells = 500, balanced = TRUE)
+    DimHeatmap(seurat_object, dims = 1:15, cells = 500, balanced = TRUE)
+    ElbowPlot(seurat_object)
+    print("Saved heatmaps and elbow plot.")
 
-  # Clustering using KNN
-  seurat_object <- FindNeighbors(seurat_object, dims = 1:10)
-  seurat_object <- FindClusters(seurat_object, resolution = 0.4)
-  head(Idents(seurat_object), 5)
+    # Clustering using KNN
+    seurat_object <- FindNeighbors(seurat_object, dims = 1:10)
+    seurat_object <- FindClusters(seurat_object, resolution = 0.4)
+    head(Idents(seurat_object), 5)
+    print("Performed clustering.")
 
-  # UMAP plots
-  seurat_object <- RunUMAP(seurat_object, dims = 1:10)
+    # UMAP plots
+    seurat_object <- RunUMAP(seurat_object, dims = 1:10)
 
-  UMAP_plot <- DimPlot(seurat_object, reduction = "umap", seed = 123)
+    UMAP_plot <- DimPlot(seurat_object, reduction = "umap", seed = 123)
 
-  ggsave(file.path(output_path, paste0("UMAP_HDF_2D_", age, ".tiff")),
-         plot = UMAP_plot, device = "tiff")
+    ggsave(file.path(output_path, paste0("UMAP_Ganier_", age, ".tiff")),
+           plot = UMAP_plot, device = "tiff")
+    print("Saved UMAP plot.")
 
-  # Finding DEGs/cluster biomarkers
-  seurat_markers <- FindAllMarkers(seurat_object, only.pos = FALSE, min.pct = 0.25, logfc.threshold = 0.25)
-  write.csv(seurat_markers, file.path(output_path, paste0("HDF2D_clustermarkers_posandneg_", age, ".csv")))
+    # Finding DEGs/cluster biomarkers
+    seurat_markers <- FindAllMarkers(seurat_object, only.pos = FALSE, min.pct = 0.25, logfc.threshold = 0.25)
+    write.csv(seurat_markers, file.path(output_path, paste0("Ganier_clustermarkers_posandneg_", age, ".csv")))
 
-  seurat_markers %>%
-    group_by(cluster) %>%
-    top_n(n = 2, wt = avg_log2FC)
+    seurat_markers %>%
+      group_by(cluster) %>%
+      top_n(n = 2, wt = avg_log2FC)
+    print("Found DEGs/cluster biomarkers.")
 
-  # Saving Seurat Object with cluster identities
-  saveRDS(seurat_object, file = file.path(output_path, paste0("hdfseuratfiltered_2Dcells_", age, ".rds")))
+    # Saving Seurat Object with cluster identities
+    saveRDS(seurat_object, file = file.path(output_path, paste0("ganierfiltered_", age, ".rds")))
+    print("Saved Seurat object.")
+  }
 }
 
-# Apply the function to your list of processed Seurat objects
 lapply(processed_seurat_list, analyze_seurat_object)
-
-
-
 
 ```
 
@@ -549,16 +559,12 @@ Ganier_list <- list(
 
 #Clustering to identify fibroblasts
 ```{r}
-library(Seurat)
-
-# Define the modified analysis function
-analyze_seurat_objects <- function(Ganier_list) {
-  for (i in seq_along(Ganier_list)) {
-    Gan_object <- Ganier_list[[i]]
-    
+analyze_seurat_objects <- function(Ganier_list, output_path = "../Output/Ganier") {
+  for (Gan_object in Ganier_list) {
     # Extract age
-    age <- Gan_object@meta.data$age[1]
-    
+    age <- unique(Gan_object@meta.data$age)
+    print(paste("Processing Seurat object with age:", age))
+
     # Identify variable features and plot
     Gan_object <- FindVariableFeatures(Gan_object, selection.method = "vst", nfeatures = 2000)
     top10 <- head(VariableFeatures(Gan_object), 10)
@@ -567,10 +573,9 @@ analyze_seurat_objects <- function(Ganier_list) {
     
     # Save Variable Features Plot
     ggsave(
-      paste0("variable_features_", names(Ganier_list)[i], "_Age_", age, ".tiff"),
+      file.path(output_path, paste0("variable_features_", "Age_", age, ".tiff")),
       plot = last_plot(),
       device = "tiff",
-      path = "../Output/Ganier",
       width = 15,  # adjust as needed
       height = 12,  # adjust as needed
       scale = 1.5  # adjust as needed
@@ -586,10 +591,9 @@ analyze_seurat_objects <- function(Ganier_list) {
     
     # Save PCA Plot
     ggsave(
-      paste0("PCA_no_label_", names(Ganier_list)[i], "_Age_", age, ".tiff"),
+      file.path(output_path, paste0("PCA_no_label_", "Age_", age, ".tiff")),
       plot = PCA_no_label,
       device = "tiff",
-      path = "../Output/Ganier",
       width = 15,  # adjust as needed
       height = 12,  # adjust as needed
       scale = 1.5  # adjust as needed
@@ -612,10 +616,9 @@ analyze_seurat_objects <- function(Ganier_list) {
     
     # Save UMAP Plot
     ggsave(
-      paste0("UMAP_Ganier_", names(Ganier_list)[i], "_Age_", age, ".tiff"),
+      file.path(output_path, paste0("UMAP_Ganier_", "Age_", age, ".tiff")),
       plot = last_plot(),
       device = "tiff",
-      path = "../Output/Ganier",
       width = 15,  # adjust as needed
       height = 12,  # adjust as needed
       scale = 1.5  # adjust as needed
@@ -647,10 +650,9 @@ analyze_seurat_objects <- function(Ganier_list) {
     
     # Save DotPlot
     ggsave(
-      paste0("DotPlot_Ganier_", names(Ganier_list)[i], "_Age_", age, ".tiff"),
+      file.path(output_path, paste0("DotPlot_Ganier_", "Age_", age, ".tiff")),
       plot = last_plot(),
       device = "tiff",
-      path = "../Output/Ganier",
       width = 15,  # adjust as needed
       height = 12,  # adjust as needed
       scale = 1.5  # adjust as needed
@@ -658,11 +660,7 @@ analyze_seurat_objects <- function(Ganier_list) {
   }
 }
 
-# Assuming you have already created and populated Ganier_list
-# For example, Ganier_list <- list(seurat_object1, seurat_object2, seurat_object3)
-
-# Run the modified analysis function
-analyze_seurat_objects(Ganier_list)
+lapply(Ganier_list, analyze_seurat_objects)
 
 
 ```
