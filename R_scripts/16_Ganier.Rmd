@@ -305,8 +305,11 @@ list <- list(KCL10525738, KCL10525739, KCL10525741, KCL9369529, KCL9369530, KCL9
 library(Seurat)
 library(ggplot2)
 
-#Preprocessing function
+# Define a function for preprocessing
 preprocess_seurat_object <- function(seurat_object, output_path = "../Output/Ganier") {
+  
+  # Extract age
+  age <- seurat_object@meta.data$age
   
   # Adding mitochondrial percentage and number of genes per UMI
   seurat_object$log10GenesPerUMI <- log10(as.numeric(seurat_object$nFeature_RNA) / as.numeric(seurat_object$nCount_RNA))
@@ -323,11 +326,11 @@ preprocess_seurat_object <- function(seurat_object, output_path = "../Output/Gan
     theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
     ggtitle("NCells")
 
-  ggsave(file.path(output_path, "NumbersPerSample.tiff"), plot = CellNumbers, device = "tiff")
+  ggsave(file.path(output_path, paste("NumbersPerSample_age_", age, ".tiff", sep = "")), plot = CellNumbers, device = "tiff")
 
   # Visualize QC metrics
   violin <- VlnPlot(seurat_object, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"))
-  ggsave(file.path(output_path, "HDF_QC_violin.tiff"), plot = violin, device = "tiff")
+  ggsave(file.path(output_path, paste("HDF_QC_violin_age_", age, ".tiff", sep = "")), plot = violin, device = "tiff")
 
   # Visualize the number of UMIs per cell (nCount_RNA)
   UMIspercell <- ggplot(seurat_object@meta.data, aes(color = age, x = nCount_RNA, fill = age)) +
@@ -337,7 +340,7 @@ preprocess_seurat_object <- function(seurat_object, output_path = "../Output/Gan
     ylab("Cell density") +
     geom_vline(xintercept = 1000) 
 
-  ggsave(file.path(output_path, "UMI-per-cell.tiff"), plot = UMIspercell, device = "tiff")
+  ggsave(file.path(output_path, paste("UMI-per-cell_age_", age, ".tiff", sep = "")), plot = UMIspercell, device = "tiff")
 
   # Visualize number of genes per cell (nFeature_RNA)
   hist_feature <- ggplot(seurat_object@meta.data, aes(color = age, x = nFeature_RNA, fill = age)) +
@@ -346,7 +349,7 @@ preprocess_seurat_object <- function(seurat_object, output_path = "../Output/Gan
     scale_x_log10() +
     geom_vline(xintercept = c(400)) 
 
-  ggsave(file.path(output_path, "hist_featureRNA.tiff"), plot = hist_feature, device = "tiff")
+  ggsave(file.path(output_path, paste("hist_featureRNA_age_", age, ".tiff", sep = "")), plot = hist_feature, device = "tiff")
 
   boxplot_feature <- ggplot(seurat_object@meta.data, aes(x = age, y = log10(nFeature_RNA), fill = age)) +
     geom_boxplot() +
@@ -355,7 +358,7 @@ preprocess_seurat_object <- function(seurat_object, output_path = "../Output/Gan
     theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
     ggtitle("NCells vs NGenes")
 
-  ggsave(file.path(output_path, "boxplot_featureRNA.tiff"), plot = boxplot_feature, device = "tiff")
+  ggsave(file.path(output_path, paste("boxplot_featureRNA_age_", age, ".tiff", sep = "")), plot = boxplot_feature, device = "tiff")
 
   # Combine number of genes, UMIs, and mitochondrial percentage
   thresholding <- ggplot(seurat_object@meta.data, aes(x = nCount_RNA, y = nFeature_RNA, color = percent.mt)) +
@@ -369,7 +372,7 @@ preprocess_seurat_object <- function(seurat_object, output_path = "../Output/Gan
     geom_hline(yintercept = 400) +
     facet_wrap(~age) 
 
-  ggsave(file.path(output_path, "thresholding_feature_count_mito.tiff"), plot = thresholding, device = "tiff")
+  ggsave(file.path(output_path, paste("thresholding_feature_count_mito_age_", age, ".tiff", sep = "")), plot = thresholding, device = "tiff")
 
   # Visualize mitochondrial gene expression per cell
   mitochondrial_genes <- ggplot(seurat_object@meta.data, aes(color = age, x = percent.mt, fill = age)) +
@@ -378,7 +381,7 @@ preprocess_seurat_object <- function(seurat_object, output_path = "../Output/Gan
     theme_classic() +
     geom_vline(xintercept = 12) 
 
-  ggsave(file.path(output_path, "mitochondrial_hist.tiff"), plot = mitochondrial_genes, device = "tiff")
+  ggsave(file.path(output_path, paste("mitochondrial_hist_age_", age, ".tiff", sep = "")), plot = mitochondrial_genes, device = "tiff")
 
   # Visualize the proportion of genes per UMI
   genesperUMI <- ggplot(seurat_object@meta.data, aes(x = log10GenesPerUMI, color = age, fill = age)) +
@@ -386,13 +389,14 @@ preprocess_seurat_object <- function(seurat_object, output_path = "../Output/Gan
     theme_classic() +
     geom_vline(xintercept = 0.8) 
 
-  ggsave(file.path(output_path, "genesperUMI.tiff"), plot = genesperUMI, device = "tiff")
+  ggsave(file.path(output_path, paste("genesperUMI_age_", age, ".tiff", sep = "")), plot = genesperUMI, device = "tiff")
 
   return(seurat_object)
 }
 
-# Apply the function to all Ganier Seurat objects
+# Apply the function to each Seurat object in the list
 processed_seurat_list <- lapply(list, preprocess_seurat_object)
+
 
 
 ```
@@ -434,8 +438,9 @@ processed_seurat_list <- process_seurat_list(processed_seurat_list)
 library(Seurat)
 library(ggplot2)
 
-# Function to select highly variable features, scale, perform PCA, cluster and run UMAPs
+# Define a function for further analysis on processed Seurat objects
 analyze_seurat_object <- function(seurat_object, output_path = "../Output/Ganier") {
+  age <- seurat_object@meta.data$age[1]
 
   # Selecting highly variable features
   seurat_object <- FindVariableFeatures(seurat_object, selection.method = "vst", nfeatures = 2000)
@@ -443,7 +448,7 @@ analyze_seurat_object <- function(seurat_object, output_path = "../Output/Ganier
   plot3 <- VariableFeaturePlot(seurat_object)
   plot4 <- LabelPoints(plot = plot3, points = top10, repel = TRUE)
 
-  ggsave(file.path(output_path, paste0("variablefeatures_", seurat_object$age[1], ".tiff")),
+  ggsave(file.path(output_path, paste0("HDF_2D_variablefeatures_", age, ".tiff")),
          plot = last_plot(), device = "tiff")
 
   # Scaling the data and performing PCA
@@ -454,9 +459,9 @@ analyze_seurat_object <- function(seurat_object, output_path = "../Output/Ganier
   PCA_no_label <- DimPlot(seurat_object, reduction = "pca", seed = 123, combine = TRUE) + NoLegend()
   PCA_Sample_label <- DimPlot(seurat_object, reduction = "pca", seed = 123, group.by = "age")
 
-  ggsave(file.path(output_path, paste0("PCA_no_label_", seurat_object$age[1], ".tiff")),
+  ggsave(file.path(output_path, paste0("PCA_no_label_", age, ".tiff")),
          plot = PCA_no_label, device = "tiff")
-  ggsave(file.path(output_path, paste0("PCA_Sample_label_", seurat_object$age[1], ".tiff")),
+  ggsave(file.path(output_path, paste0("PCA_Sample_label_", age, ".tiff")),
          plot = PCA_Sample_label, device = "tiff")
 
   # Heatmaps and Elbow Plot
@@ -474,23 +479,26 @@ analyze_seurat_object <- function(seurat_object, output_path = "../Output/Ganier
 
   UMAP_plot <- DimPlot(seurat_object, reduction = "umap", seed = 123)
 
-  ggsave(file.path(output_path, paste0("UMAP_", seurat_object$age[1], ".tiff")),
+  ggsave(file.path(output_path, paste0("UMAP_HDF_2D_", age, ".tiff")),
          plot = UMAP_plot, device = "tiff")
 
   # Finding DEGs/cluster biomarkers
   seurat_markers <- FindAllMarkers(seurat_object, only.pos = FALSE, min.pct = 0.25, logfc.threshold = 0.25)
-  write.csv(seurat_markers, file.path(output_path, paste0("clustermarkers_posandneg_", seurat_object$age[1], ".csv")))
+  write.csv(seurat_markers, file.path(output_path, paste0("HDF2D_clustermarkers_posandneg_", age, ".csv")))
 
   seurat_markers %>%
     group_by(cluster) %>%
     top_n(n = 2, wt = avg_log2FC)
 
   # Saving Seurat Object with cluster identities
-  saveRDS(seurat_object, file = file.path(output_path, paste0("ganierfiltered_", seurat_object$age[1], ".rds")))
+  saveRDS(seurat_object, file = file.path(output_path, paste0("hdfseuratfiltered_2Dcells_", age, ".rds")))
 }
 
-# Apply the function to all Ganier seurat objects
+# Apply the function to your list of processed Seurat objects
 lapply(processed_seurat_list, analyze_seurat_object)
+
+
+
 
 ```
 
@@ -539,138 +547,85 @@ Ganier_list <- list(
 )
 ```
 
-#Integrating all Seurat objects. Note - this is computationally very expensive, and requires use of a HPC cluster. This research utilised Queen Mary's Apocrita HPC facility, supported by QMUL Research-IT. http://doi.org/10.5281/zenodo.438045.
-
+#Clustering to identify fibroblasts
 ```{r}
-# Function to apply SCTransform all Ganier seurat objects
-applySCTransformToList <- function(seuratList) {
-  transformedList <- list()
-  
-  for (i in seq_along(seuratList)) {
-    seuratObj <- seuratList[[i]]
+library(Seurat)
+
+# Define the modified analysis function
+analyze_seurat_objects <- function(Ganier_list) {
+  for (i in seq_along(Ganier_list)) {
+    Gan_object <- Ganier_list[[i]]
     
-    # Check if the object has already been SCTransformed
-    if (!"SCT" %in% colnames(seuratObj)) {
-      # Apply SCTransform if not already done
-      seuratObj <- SCTransform(seuratObj)
-    } else {
-      message(paste("SCTransform already applied to Seurat object in list at index", i))
-    }
+    # Extract age
+    age <- Gan_object@meta.data$age[1]
     
-    transformedList[[i]] <- seuratObj
-  }
-  
-  return(transformedList)
-}
-
-# Apply SCTransform to each Seurat object in the list
-transformed_seurat_list <- applySCTransformToList(seurat_list)
-
-# Select integration features
-integ_features <- SelectIntegrationFeatures(object.list = transformed_seurat_list, 
-                                            nfeatures = 2000)
-
-# Prepare for integration
-prep_integ <- PrepSCTIntegration(object.list = transformed_seurat_list, 
-                                  anchor.features = integ_features)
-
-# Find integration anchors
-integ_anchors <- FindIntegrationAnchors(object.list = prep_integ$anchors, 
-                                        normalization.method = "LogNormalize", 
-                                        anchor.features = integ_features)
-
-# Integrate data
-Ganier_integrated <- IntegrateData(anchorset = integ_anchors, 
-                                   normalization.method = "LogNormalize")
-
-# Output integrated Seurat object
-print(Ganier_integrated)
-
-```
-
-## Selecting highly variable features
-```{r}
-#Selecting highly variable features - high cell to cell variation
-Ganier_integrated <- FindVariableFeatures(Ganier_integrated, selection.method ="vst", nfeatures=2000)
-#Identify the 10 most highly variable genes
-top10 <- head(VariableFeatures(Ganier_integrated), 10)
-top10
-plot3 <- VariableFeaturePlot(Ganier_integrated)
-#Plot variable features with labels
-plot4 <- LabelPoints(plot=plot3, points = top10, repel=TRUE)
-plot4
-
-ggsave(
-  "Ganier_integrated_variablefeatures.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/Ganier"
-  )
-```
-
-```{r}
-all.genes <- rownames(Ganier_integrated)
-Ganier_integrated <- ScaleData(Ganier_integrated, features = all.genes)
-
-#Performing a PCA
-Ganier_integrated <- RunPCA(Ganier_integrated, features=VariableFeatures(object = Ganier_integrated))
-
-#Plotting the PCA
-PCA_no_label <- DimPlot(Ganier_integrated, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
-PCA_Sample_label <- DimPlot(Ganier_integrated, reduction = "pca", seed = 123, group.by = "scpred_prediction")
-
-PCA_no_label
-PCA_Sample_label
-```
-
-```{r}
-DimHeatmap(Ganier_integrated, dims=1, cells=500, balanced=TRUE)
-DimHeatmap(Ganier_integrated, dims=1:15, cells=500, balanced=TRUE)
-ElbowPlot(Ganier_integrated) 
-
-#Suggests top 10 PCs explain most of the variance. Test this with jackstraw plot
-#hdfseurat_jackstraw <- JackStraw(hdfseurat_filt_2D, num.replicate = 100)
-#hdfseurat_jackstraw <- ScoreJackStraw(hdfseurat_jackstraw, dims = 1:20)
-#JackStrawPlot(hdfseurat_jackstraw, dims = 1:15)
-```
-
-## Clustering the cells using KNN
-```{r}
-#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
-Ganier_integrated <- FindNeighbors(Ganier_integrated, dims =1:10)
-
-#group cells using findclusters function
-Ganier_integrated <- FindClusters(Ganier_integrated, resolution = 0.4)
-
-#Look at cluster ID's of first 5 cells
-head(Idents(Ganier_integrated), 5)
-```
-
-## Plot UMAP
-```{r}
-#Running a UMAP
-Ganier_integrated <- RunUMAP(Ganier_integrated, dims=1:10)
-
-#Plotting UMAP with cluster IDs
-DimPlot(Ganier_integrated, reduction = "umap", seed = 123) +
-  custom_theme(base_size=20)
-
-ggsave(
-  "UMAP_ganierintegrated.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/Ganier"
-  )
-
-```
-
-# Looking at list of predefined genes by Ganier et al. to identify fibroblast cluster
-
-```{r}
-  features_to_plot <- c("SARAF", "RORA", "CCL5", "NKG7", "APOD", "APOE", "CD69", "TNF", "CTLA4", "TIGIT", "C1QA", "CCL3", "HLA-DRA", "LYZ", "SFRP2", "WISP2", "TAGLN", "MYL9", "POSTN", "COL3A1", "RGS5", "STEAP4", "TM4SF1", "IFI27", "PTPRC", "SRSF7", "XCL1", "XCL2", "LY6D", "KRT1", "CD37", "BANK1", "KRT17", "PTCH1", "IL1B", "CXCL8", "TPSB2", "KIT", "PMEL", "TRYP1", "ACAN", "COL2A1", "CST3", "CPVL", "CCL21", "MMRN1", "JCHAIN", "IGHA1", "PTGDS", "ASPN", "CCL17", "CCL22", "IL8", "FCER1A", "CDH19", "SCN7A", "ACTA2", "DES", "MYLPF", "MYL1")
+    # Identify variable features and plot
+    Gan_object <- FindVariableFeatures(Gan_object, selection.method = "vst", nfeatures = 2000)
+    top10 <- head(VariableFeatures(Gan_object), 10)
+    plot3 <- VariableFeaturePlot(Gan_object)
+    plot4 <- LabelPoints(plot = plot3, points = top10, repel = TRUE)
+    
+    # Save Variable Features Plot
+    ggsave(
+      paste0("variable_features_", names(Ganier_list)[i], "_Age_", age, ".tiff"),
+      plot = last_plot(),
+      device = "tiff",
+      path = "../Output/Ganier",
+      width = 15,  # adjust as needed
+      height = 12,  # adjust as needed
+      scale = 1.5  # adjust as needed
+    )
+    
+    # Scaling and PCA
+    all.genes <- rownames(Gan_object)
+    Gan_object <- ScaleData(Gan_object, features = all.genes)
+    Gan_object <- RunPCA(Gan_object, features = VariableFeatures(object = Gan_object))
+    
+    # Plot PCA
+    PCA_no_label <- DimPlot(Gan_object, reduction = "pca", seed = 123, combine = TRUE) + NoLegend()
+    
+    # Save PCA Plot
+    ggsave(
+      paste0("PCA_no_label_", names(Ganier_list)[i], "_Age_", age, ".tiff"),
+      plot = PCA_no_label,
+      device = "tiff",
+      path = "../Output/Ganier",
+      width = 15,  # adjust as needed
+      height = 12,  # adjust as needed
+      scale = 1.5  # adjust as needed
+    )
+    
+    # Heatmaps
+    DimHeatmap(Gan_object, dims = 1, cells = 500, balanced = TRUE)
+    DimHeatmap(Gan_object, dims = 1:15, cells = 500, balanced = TRUE)
+    ElbowPlot(Gan_object)
+    
+    # Clustering using KNN
+    Gan_object <- FindNeighbors(Gan_object, dims = 1:10)
+    Gan_object <- FindClusters(Gan_object, resolution = 0.4)
+    head(Idents(Gan_object), 5)
+    
+    # Plot UMAP
+    Gan_object <- RunUMAP(Gan_object, dims = 1:10)
+    # Create and Save UMAP Plot
+    umap_plot <- DimPlot(Gan_object, reduction = "umap", seed = 123)
+    
+    # Save UMAP Plot
+    ggsave(
+      paste0("UMAP_Ganier_", names(Ganier_list)[i], "_Age_", age, ".tiff"),
+      plot = last_plot(),
+      device = "tiff",
+      path = "../Output/Ganier",
+      width = 15,  # adjust as needed
+      height = 12,  # adjust as needed
+      scale = 1.5  # adjust as needed
+    )
+    
+    # Dotplot
+    features_to_plot <- c("SARAF", "RORA", "CCL5", "NKG7", "APOD", "APOE", "CD69", "TNF", "CTLA4", "TIGIT", "C1QA", "CCL3", "HLA-DRA", "LYZ", "SFRP2", "WISP2", "TAGLN", "MYL9", "POSTN", "COL3A1", "RGS5", "STEAP4", "TM4SF1", "IFI27", "PTPRC", "SRSF7", "XCL1", "XCL2", "LY6D", "KRT1", "CD37", "BANK1", "KRT17", "PTCH1", "IL1B", "CXCL8", "TPSB2", "KIT", "PMEL", "TRYP1", "ACAN", "COL2A1", "CST3", "CPVL", "CCL21", "MMRN1", "JCHAIN", "IGHA1", "PTGDS", "ASPN", "CCL17", "CCL22", "IL8", "FCER1A", "CDH19", "SCN7A", "ACTA2", "DES", "MYLPF", "MYL1")
 
     DotPlot(
-      Ganier_integrated,
+      Gan_object,
       features = features_to_plot,
       assay = NULL,
       cols = c("lightgrey", "blue"),
@@ -687,217 +642,450 @@ ggsave(
       scale.min = NA,
       scale.max = NA
     ) +
-    theme(axis.text.x = element_text(size = 8, angle = 90)) +
-      custom_theme(base_size=20)
+    # Adjust x-axis labels in DotPlot
+    theme(axis.text.x = element_text(size = 8, angle = 90))
     
+    # Save DotPlot
     ggsave(
-  "Dotplot_Ganier.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/Ganier"
-  )
+      paste0("DotPlot_Ganier_", names(Ganier_list)[i], "_Age_", age, ".tiff"),
+      plot = last_plot(),
+      device = "tiff",
+      path = "../Output/Ganier",
+      width = 15,  # adjust as needed
+      height = 12,  # adjust as needed
+      scale = 1.5  # adjust as needed
+    )
+  }
+}
+
+# Assuming you have already created and populated Ganier_list
+# For example, Ganier_list <- list(seurat_object1, seurat_object2, seurat_object3)
+
+# Run the modified analysis function
+analyze_seurat_objects(Ganier_list)
+
 
 ```
 
-## Extract only pre-defined fibroblast cluster
+
+## Subset to get just fibs
 ```{r}
-# Subset cells based on seurat clusters - NOTE THIS NEEDS EDITING
+# Assuming 'Ganier_list' is your list of Seurat objects
+
+# Install and load the Seurat package if not already installed
+# install.packages("Seurat")
+# library(Seurat)
+
+# Assuming the Seurat objects are already created and stored in 'Ganier_list'
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[1]]
+
+# Subset cells based on seurat_cluster values
 selected_clusters <- c(1, 2, 5)
 
 # Filter cells based on the specified clusters
-Ganier_fibs <- subset(Ganier_integrated, cells = which(Ganier_integrated@meta.data$seurat_cluster %in% selected_clusters))
+Ganier_56_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
 
-saveRDS(Ganier_fibs, file = "../Output/Ganier/ganier_fibs.rds")
+# Print the summary to check the changes
+summary(Ganier_56_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[2]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 4)
+
+# Filter cells based on the specified clusters
+Ganier_59_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_59_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[3]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(2, 4)
+
+# Filter cells based on the specified clusters
+Ganier_62_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_62_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[4]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 4, 8)
+
+# Filter cells based on the specified clusters
+Ganier_70_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_70_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[5]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(4)
+
+# Filter cells based on the specified clusters
+Ganier_73_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_73_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[6]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 6)
+
+# Filter cells based on the specified clusters
+Ganier_77_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_77_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[7]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(0, 1, 5)
+
+# Filter cells based on the specified clusters
+Ganier_78_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_78_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[8]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(4)
+
+# Filter cells based on the specified clusters
+Ganier_80_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_80_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[9]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 6, 7)
+
+# Filter cells based on the specified clusters
+Ganier_81_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_81_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[10]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(2, 4)
+
+# Filter cells based on the specified clusters
+Ganier_85_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_85_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[11]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 4, 7)
+
+# Filter cells based on the specified clusters
+Ganier_86_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_86_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[12]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(2, 6)
+
+# Filter cells based on the specified clusters
+Ganier_90_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_90_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
 ```
 
-# Clustering the fibroblasts alone
+## Saving seurat objects
+```{r}
+filt_list <- list(Ganier_56_filt, Ganier_59_filt, Ganier_62_filt, Ganier_70_filt, Ganier_73_filt, Ganier_77_filt, Ganier_78_filt, Ganier_80_filt, Ganier_81_filt, Ganier_85_filt, Ganier_86_filt, Ganier_90_filt)
 
-## Finding top variable genes within the dataset
+save_filtered_seurat_objects <- function(seurat_list, output_dir = "../Output/FilteredGanier/") {
+  # Create the output directory if it doesn't exist
+  if (!file.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
+
+  # Loop through each Seurat object in the list
+  for (i in seq_along(seurat_list)) {
+    seurat_object <- seurat_list[[i]]
+    
+    # Extract age value from @meta.data
+    age_value <- unique(seurat_object@meta.data$age)
+
+    # Replace spaces with underscores and remove special characters
+    sanitized_age <- gsub("[[:space:]]", "_", age_value)
+    sanitized_age <- gsub("[^[:alnum:]_]", "", sanitized_age)
+
+    # Generate the output filename
+    output_filename <- paste0(output_dir, "filteredseurat_Ganier_", sanitized_age, ".rds")
+
+    # Save the filtered Seurat object
+    saveRDS(seurat_object, file = output_filename)
+    
+    cat("Saved:", output_filename, "\n")
+  }
+}
+
+# Example usage assuming 'filt_list' is your list of filtered Seurat objects
+save_filtered_seurat_objects(filt_list)
+
+```
+
 
 ```{r}
-#Selecting highly variable features - high cell to cell variation
-Ganier_fibs <- FindVariableFeatures(Ganier_fibs, selection.method ="vst", nfeatures=2000)
+Ganier_56 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_56.rds")
 
-#Identify the 10 most highly variable genes
-top10 <- head(VariableFeatures(Ganier_fibs), 10)
-top10
+Ganier_59 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_59.rds")
 
-top2000 <- head(VariableFeatures(Ganier_fibs), 2000)
-top2000
+Ganier_62 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_62.rds")
 
-#Plot variable features without labels
-plot1 <- VariableFeaturePlot(Ganier_fibs)
+Ganier_70 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_70.rds")
 
-#Plot variable features with labels
-plot2 <- LabelPoints(plot=plot1, points = top10, repel=TRUE)
-plot1
-plot2
+Ganier_73 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_73.rds")
 
-ggsave(
-  "topvariablefeatures.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
+Ganier_77 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_77.rds")
+
+Ganier_78 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_78.rds")
+
+Ganier_80 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_80.rds")
+
+Ganier_81 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_81.rds")
+
+Ganier_85 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_85.rds")
+
+Ganier_86 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_86.rds")
+
+Ganier_90 <- readRDS("../Output/FilteredGanier/filteredseurat_Ganier_90.rds")
 ```
-
-## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
-```{r}
-all.genes <- rownames(Ganier_fibs)
-Ganier_fibs <- ScaleData(Ganier_fibs, features = all.genes)
-
-#Performing a PCA
-Ganier_fibs <- RunPCA(Ganier_fibs, features=VariableFeatures(object = Ganier_fibs))
-
-#Plotting the PCA
-PCA_no_label <- DimPlot(Ganier_fibs, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
-PCA_Sample_label <- DimPlot(Ganier_fibs, reduction = "pca", seed = 123, group.by = "age")
-
-PCA_no_label
-ggsave(
-  "PCA_nolabel.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
-
-PCA_Sample_label
-ggsave(
-  "PCA_agelabel.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
-
-
-```
-
-## Heatmaps to investigate the genes influencing the top PCs
-```{r}
-DimHeatmap(Ganier_fibs, dims=1, cells=500, balanced=TRUE)
-DimHeatmap(Ganier_fibs, dims=1:15, cells=500, balanced=TRUE)
-ElbowPlot(Ganier_fibs)
-```
-
-## Clustering the cells using KNN
-```{r}
-#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
-Ganier_fibs <- FindNeighbors(Ganier_fibs, dims =1:10)
-
-#group cells using findclusters function
-Ganier_fibs <- FindClusters(Ganier_fibs, resolution = 0.2)
-
-#Look at cluster ID's of first 5 cells
-head(Idents(Ganier_fibs), 5)
-```
-
-## Plot UMAP
-```{r}
-#Running a UMAP
-Ganier_fibs <- RunUMAP(Ganier_fibs, dims=1:10)
-
-DimPlot(Ganier_fibs, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48")) +
-  custom_theme(base_size=20)
-ggsave(
-  "UMAP_clusters_all.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
-
-DimPlot(Ganier_fibs, reduction = "umap", seed = 123, group.by="age", cols = c("#2e5266", "#ecb0e1", "#832232", "#a6a867", "#bc5f04", "#f9a52c")) + 
-  custom_theme(base_size=20)
-ggsave(
-  "UMAP_clusters_all_age.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
-```
-
-#Testing ScPred 3D ML models on Ganier datasets
-```{r}
-#MDA radial model
-queryGanier <- NormalizeData(Ganier_fibs)
-queryGanier <- scPredict(queryGanier, hdf_mda3D)
-
-DimPlot(queryGanier, group.by = "age", label = FALSE, repel = TRUE, label.size=2, seed=123) + 
-  custom_theme(base_size=20)
-        
-       
-ggsave(
-  "UMAP_Sample.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
-
-
-DimPlot(queryGanier, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4")) + 
-  custom_theme(base_size=20)
-
-ggsave(
-  "UMAP_scpred_EPDS_3D.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
-```
-
-
-## Investigating the percentage of DS predicted cells per age
 
 ```{r}
-query2 <- queryGanier@meta.data
-table <- table(query2[, c("age", "scpred_prediction")])
-table
-mat <- as.data.frame.matrix(table)
-mat
+Ganier_list <- list(
+  Ganier_56,
+  Ganier_59,
+  Ganier_62,
+  Ganier_70,
+  Ganier_73,
+  Ganier_77,
+  Ganier_78,
+  Ganier_80,
+  Ganier_81,
+  Ganier_85,
+  Ganier_86,
+  Ganier_90
+)
+```
 
-percentages <- (mat/rowSums(mat))*100
-percentages
-percentages <- na.omit(percentages)
-percentages
-as.matrix(percentages)
-percentages <- percentages[ order(row.names(percentages)), ]
 
-percentages_Ganier3D <- percentages
-write.csv(percentages_Ganier3D, "../Output/GanierFibs/EPDS3D_ganierfibs.csv")
+```{r}
+library(Seurat)
 
-df <- tibble::rownames_to_column(percentages, "age")
-perc <- melt(df)
-v <- perc$age
+# Assuming 'Ganier_list' is your list of Seurat objects
 
-print (perc)
-#convert 'variable' to factor and specify level order
-perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP3D', 'DS3D'))
+# Define a function to run the code and save barplot for each Seurat object
+run_and_save_barplot <- function(seurat_object) {
+  # NormalizeData and scPredict
+  query <- NormalizeData(seurat_object)
+  query <- scPredict(query, hdf_mda3D)
 
-#create stacked bar chart
-ggplot(perc, aes(x=age, y=value, fill=variable)) + 
-    geom_bar(position='stack', stat='identity') +
-  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "darkblue")) +
-  custom_theme(base_size=20)
+  # Extract metadata for further analysis
+  query2 <- query@meta.data
+  table <- table(query2[, c("age", "scpred_prediction")])
+  mat <- as.data.frame.matrix(table)
+  
+  # Calculate percentages and create barplot
+  percentages <- (mat / rowSums(mat)) * 100
+  percentages <- na.omit(percentages)
+  percentages <- percentages[order(row.names(percentages)), ]
+  v <- rownames(percentages)
 
-ggsave("barplot_stacked_3Dpred_age.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
+  # Save the percentages data for each Seurat object
+  percentages_file <- file.path("../Output/Ganier", paste0("Percentages_DS3D_by_age_", seurat_object@meta.data$age, ".csv"))
+  write.csv(percentages, file = percentages_file)
+
+  # Create barplot
+  barplot_data <- percentages$DS3D
+  barplot_names <- v
+
+  barplot_file <- file.path("../Output/Ganier", paste0("scPred3D_barplot_DS3Dbyage_", seurat_object@meta.data$age, ".png"))
+  png(filename = barplot_file, width = 800, height = 600)
+  barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue",
+          main = "Percentage of predicted deeply senescent cells", xlab = "Age",
+          ylab = "Percentage", ylim = c(0, 100))
+  dev.off()
+}
+
+# Apply the function to your list of Seurat objects
+lapply(Ganier_list, run_and_save_barplot)
+
 
 ```
+
 
 #Combining Tabib, Sole, and Ganier predictions for scatterplot - 3D
 
 ```{r}
 Tabib <- read.csv("../Output/Tabib/EPDS3D_tabibfibs.csv")
 Sole <- read.csv("../Output/SoleBoldo/EPDS3D_solefibs.csv")
-Ganier <- read.csv("../Output/GanierFibs/EPDS3D_ganierfibs.csv")
+Ganier56 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_56.csv")
+Ganier59 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_59.csv")
+Ganier62 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_62.csv")
+Ganier70 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_70.csv")
+Ganier73 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_73.csv")
+Ganier77 <- read.csv("../Output/Ganier//Percentages_DS3D_by_age_77.csv")
+Ganier78 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_78.csv")
+Ganier81 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_81.csv")
+Ganier90 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_90.csv")
 
 # Set the first column as row names
-rownames(Ganier) <- Ganier[, 1]
+rownames(Ganier56) <- Ganier56[, 1]
 
 # Remove the first column (it is now redundant)
-Ganier <- Ganier[, -1]
+Ganier56 <- Ganier56[, -1]
+
+# Set the first column as row names
+rownames(Ganier59) <- Ganier59[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier59 <- Ganier59[, -1]
+
+# Set the first column as row names
+rownames(Ganier62) <- Ganier62[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier62 <- Ganier62[, -1]
+
+# Set the first column as row names
+rownames(Ganier70) <- Ganier70[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier70 <- Ganier70[, -1]
+
+# Set the first column as row names
+rownames(Ganier73) <- Ganier73[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier73 <- Ganier73[, -1]
+
+# Set the first column as row names
+rownames(Ganier77) <- Ganier77[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier77 <- Ganier77[, -1]
+
+# Set the first column as row names
+rownames(Ganier78) <- Ganier78[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier78 <- Ganier78[, -1]
+
+# Set the first column as row names
+rownames(Ganier81) <- Ganier81[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier81 <- Ganier81[, -1]
+
+
+rownames(Ganier90) <- Ganier90[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier90 <- Ganier90[, -1]
 
 # Set the first column as row names
 rownames(Tabib) <- Tabib[, 1]
@@ -916,7 +1104,7 @@ Sole <- Sole[, -1]
 
 ```{r}
 # Create a list of data frames
-df_list <- list(Tabib, Sole, Ganier)
+df_list <- list(Tabib, Sole, Ganier56, Ganier59, Ganier62, Ganier70, Ganier73, Ganier77, Ganier78, Ganier81, Ganier90)
 
 # Extract row names and create a new column "age" in each data frame
 for (i in seq_along(df_list)) {
@@ -945,6 +1133,8 @@ merged_long <- tidyr::pivot_longer(merged_df, cols = -age, names_to = "variable"
 # Convert 'age' to numeric
 merged_long$age <- as.numeric(merged_long$age)
 
+png(filename = "../Output/percentageDSpredicted_all_fibs_3D.png", width = 800, height = 600)  # Set appropriate width and height
+
 # Create a scatterplot with a trendline
 p <- ggplot(merged_long, aes(x = age, y = value)) +
   geom_point(size = 3, color = "blue") +  # Make points larger and blue
@@ -953,107 +1143,133 @@ p <- ggplot(merged_long, aes(x = age, y = value)) +
   theme_minimal() +
   theme(panel.grid = element_blank())  # Remove gridlines
 
-# Extract Pearson correlation coefficient and p-values
-cor_coef <- cor.test(merged_long$age, merged_long$value, method = "pearson")
-pearson_cor <- sprintf("Pearson correlation = %.3f", cor_coef$estimate)
-pval <- sprintf("p = %.3f", cor_coef$p.value)
+# Extract R-squared and p-values
+fit <- lm(value ~ age, data = merged_long)
+rsq <- sprintf("R^2 = %.3f", summary(fit)$r.squared)
+pval <- sprintf("p = %.3f", summary(fit)$coefficients[2,4])
 
 # Add R-squared and p-values as text
 p + 
-  geom_text(x = max(merged_long$age), y = max(merged_long$value), label = paste(pearson_cor, pval, sep = ", "), hjust = 1, vjust = 10) +
-  custom_theme(base_size=20)
+  geom_text(x = max(merged_long$age), y = max(merged_long$value), label = paste(rsq, pval, sep = ", "), hjust = 1, vjust = 10)
 
-ggsave(
-  "scatterplot_3Dfibs_TabibGanierSole.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output"
-  )
-
+dev.off()
 
 ```
 
 # Testing the SenPred 2D EP/DS model on Ganier, and merging the predictions into a scatterplot with Tabib and Sole-Boldo data
 ```{r}
-#MDA radial model
-queryGanier <- NormalizeData(Ganier_fibs)
-queryGanier <- scPredict(queryGanier, hdf_mda2D)
+library(Seurat)
 
-DimPlot(queryGanier, group.by = "age", label = FALSE, repel = TRUE, label.size=2, seed=123) + 
-  custom_theme(base_size=20)
-        
-       
-ggsave(
-  "UMAP_Sample_2D.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
+# Assuming 'Ganier_list' is your list of Seurat objects
+
+# Define a function to run the code and save barplot for each Seurat object
+run_and_save_barplot <- function(seurat_object) {
+  # NormalizeData and scPredict
+  query <- NormalizeData(seurat_object)
+  query <- scPredict(query, hdf_mda2D)
+
+  # Extract metadata for further analysis
+  query2 <- query@meta.data
+  table <- table(query2[, c("age", "scpred_prediction")])
+  mat <- as.data.frame.matrix(table)
+  
+  # Calculate percentages and create barplot
+  percentages <- (mat / rowSums(mat)) * 100
+  percentages <- na.omit(percentages)
+  percentages <- percentages[order(row.names(percentages)), ]
+  v <- rownames(percentages)
+
+  # Save the percentages data for each Seurat object
+  percentages_file <- file.path("../Output/Ganier", paste0("Percentages_DS2D_by_age_", seurat_object@meta.data$age, ".csv"))
+  write.csv(percentages, file = percentages_file)
+
+  # Create barplot
+  barplot_data <- percentages$DS3D
+  barplot_names <- v
+
+  barplot_file <- file.path("../Output/Ganier", paste0("scPred3D_barplot_DS2Dbyage_", seurat_object@meta.data$age, ".png"))
+  png(filename = barplot_file, width = 800, height = 600)
+  barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue",
+          main = "Percentage of predicted deeply senescent cells", xlab = "Age",
+          ylab = "Percentage", ylim = c(0, 100))
+  dev.off()
+}
+
+# Apply the function to your list of Seurat objects
+lapply(Ganier_list, run_and_save_barplot)
 
 
-DimPlot(queryGanier, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed=123, cols = c("darkblue", "deeppink3", "antiquewhite4")) + 
-  custom_theme(base_size=20)
-
-ggsave(
-  "UMAP_scpred_EPDS_2D.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
 ```
 
 
-## Investigating the percentage of DS predicted cells per age
+#Combining Tabib, Sole, and Ganier predictions for scatterplot - 3D
 
-```{r}
-query2 <- queryGanier@meta.data
-table <- table(query2[, c("age", "scpred_prediction")])
-table
-mat <- as.data.frame.matrix(table)
-mat
-
-percentages <- (mat/rowSums(mat))*100
-percentages
-percentages <- na.omit(percentages)
-percentages
-as.matrix(percentages)
-percentages <- percentages[ order(row.names(percentages)), ]
-
-percentages_Ganier2D <- percentages
-write.csv(percentages_Ganier2D, "../Output/GanierFibs/EPDS2D_ganierfibs.csv")
-
-df <- tibble::rownames_to_column(percentages, "age")
-perc <- melt(df)
-v <- perc$age
-
-print (perc)
-#convert 'variable' to factor and specify level order
-perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'DS2D'))
-
-#create stacked bar chart
-ggplot(perc, aes(x=age, y=value, fill=variable)) + 
-    geom_bar(position='stack', stat='identity') +
-  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "darkblue")) +
-  custom_theme(base_size=20)
-
-ggsave("barplot_stacked_2Dpred_age.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/GanierFibs"
-  )
-```
-
-## Combining all three 2D predictions
 ```{r}
 Tabib <- read.csv("../Output/Tabib/EPDS2D_tabibfibs.csv")
 Sole <- read.csv("../Output/SoleBoldo/EPDS2D_solefibs.csv")
-Ganier <- read.csv("../Output/GanierFibs/EPDS2D_ganierfibs.csv")
+Ganier56 <- read.csv("../Output/Ganier/Percentages_DS2D_by_age_56.csv")
+Ganier59 <- read.csv("../Output/Ganier/Percentages_DS2D_by_age_59.csv")
+Ganier62 <- read.csv("../Output/Ganier/Percentages_DS2D_by_age_62.csv")
+Ganier70 <- read.csv("../Output/Ganier/Percentages_DS2D_by_age_70.csv")
+Ganier73 <- read.csv("../Output/Ganier/Percentages_DS2D_by_age_73.csv")
+Ganier77 <- read.csv("../Output/Ganier//Percentages_DS2D_by_age_77.csv")
+Ganier78 <- read.csv("../Output/Ganier/Percentages_DS2D_by_age_78.csv")
+Ganier81 <- read.csv("../Output/Ganier/Percentages_DS2D_by_age_81.csv")
+Ganier90 <- read.csv("../Output/Ganier/Percentages_DS2D_by_age_90.csv")
 
 # Set the first column as row names
-rownames(Ganier) <- Ganier[, 1]
+rownames(Ganier56) <- Ganier56[, 1]
 
 # Remove the first column (it is now redundant)
-Ganier <- Ganier[, -1]
+Ganier56 <- Ganier56[, -1]
+
+# Set the first column as row names
+rownames(Ganier59) <- Ganier59[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier59 <- Ganier59[, -1]
+
+# Set the first column as row names
+rownames(Ganier62) <- Ganier62[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier62 <- Ganier62[, -1]
+
+# Set the first column as row names
+rownames(Ganier70) <- Ganier70[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier70 <- Ganier70[, -1]
+
+# Set the first column as row names
+rownames(Ganier73) <- Ganier73[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier73 <- Ganier73[, -1]
+
+# Set the first column as row names
+rownames(Ganier77) <- Ganier77[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier77 <- Ganier77[, -1]
+
+# Set the first column as row names
+rownames(Ganier78) <- Ganier78[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier78 <- Ganier78[, -1]
+
+# Set the first column as row names
+rownames(Ganier81) <- Ganier81[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier81 <- Ganier81[, -1]
+
+
+rownames(Ganier90) <- Ganier90[, 1]
+
+# Remove the first column (it is now redundant)
+Ganier90 <- Ganier90[, -1]
 
 # Set the first column as row names
 rownames(Tabib) <- Tabib[, 1]
@@ -1072,7 +1288,7 @@ Sole <- Sole[, -1]
 
 ```{r}
 # Create a list of data frames
-df_list <- list(Tabib, Sole, Ganier)
+df_list <- list(Tabib, Sole, Ganier56, Ganier59, Ganier62, Ganier70, Ganier73, Ganier77, Ganier78, Ganier81, Ganier90)
 
 # Extract row names and create a new column "age" in each data frame
 for (i in seq_along(df_list)) {
@@ -1101,6 +1317,8 @@ merged_long <- tidyr::pivot_longer(merged_df, cols = -age, names_to = "variable"
 # Convert 'age' to numeric
 merged_long$age <- as.numeric(merged_long$age)
 
+png(filename = "../Output/percentageDSpredicted_all_fibs_2D.png", width = 800, height = 600)  # Set appropriate width and height
+
 # Create a scatterplot with a trendline
 p <- ggplot(merged_long, aes(x = age, y = value)) +
   geom_point(size = 3, color = "blue") +  # Make points larger and blue
@@ -1109,23 +1327,16 @@ p <- ggplot(merged_long, aes(x = age, y = value)) +
   theme_minimal() +
   theme(panel.grid = element_blank())  # Remove gridlines
 
-# Extract Pearson correlation coefficient and p-values
-cor_coef <- cor.test(merged_long$age, merged_long$value, method = "pearson")
-pearson_cor <- sprintf("Pearson correlation = %.3f", cor_coef$estimate)
-pval <- sprintf("p = %.3f", cor_coef$p.value)
+# Extract R-squared and p-values
+fit <- lm(value ~ age, data = merged_long)
+rsq <- sprintf("R^2 = %.3f", summary(fit)$r.squared)
+pval <- sprintf("p = %.3f", summary(fit)$coefficients[2,4])
 
 # Add R-squared and p-values as text
 p + 
-  geom_text(x = max(merged_long$age), y = max(merged_long$value), label = paste(pearson_cor, pval, sep = ", "), hjust = 1, vjust = 10) +
-  custom_theme(base_size=20)
+  geom_text(x = max(merged_long$age), y = max(merged_long$value), label = paste(rsq, pval, sep = ", "), hjust = 1, vjust = 10)
 
-ggsave(
-  "scatterplot_2Dfibs_TabibGanierSole.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output"
-  )
-
+dev.off()
 
 ```
 

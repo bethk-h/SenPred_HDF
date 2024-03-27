@@ -158,7 +158,7 @@ print(merged_df)
 library(gplots)
 
 # Extract numeric matrix from merged_df, excluding the 'genes' column
-numeric_matrix <- as.matrix(merged_df[, -which(names(merged_df) == "genes")])
+numeric_matrix <- as.matrix(merged_df)
 
 # Create breaks and define palette
 breaks <- unique(c(seq(-10,-0.011,length=100), seq(-0.011,0.01,length=100), seq(0.011,10,length=100)))
@@ -172,67 +172,26 @@ heatmap.2(numeric_matrix, col=my_palette, breaks = breaks, key=TRUE, trace="none
 
 ```{r}
 # Remove rows where all values are 0
-merged_df_nozero <- merged_df[rowSums(merged_df[, -which(names(merged_df) == "genes")]) != 0, ]
-
+merged_df_nozero <- merged_df[rowSums(merged_df != 0) != 0, ]
 # Load required libraries
 library(gplots)
 
 # Extract numeric matrix from merged_df, excluding the 'genes' column
-numeric_matrix <- as.matrix(merged_df_nozero[, -which(names(merged_df) == "genes")])
+numeric_matrix <- as.matrix(merged_df_nozero)
 
 # Create breaks and define palette
 breaks <- unique(c(seq(-0.011,0.01,length=100), seq(0.011,20,length=100)))
 my_palette <- colorRampPalette(c("white", "white", "blue"))(length(breaks)-1)
 
+
+png(filename = "../Output/Matrisome/Matrisome_nozero.png", width = 800, height = 600)  # Set appropriate width and height
+
 # Create heatmap using heatmap.2 with adjusted x-axis label size
-heatmap.2(numeric_matrix, col=my_palette, breaks = breaks, key=TRUE, trace="none", main="Matrisome", key.title = "Gene count", cexRow=0.1, cexCol=0.5, distfun = function(x) dist(x, method = "euclidean"), hclust = function(x) hclust(x, method = "ward.D2"), symkey = FALSE, density.info = "none", cex.axis = 5)
+heatmap.2(numeric_matrix, col=my_palette, breaks = breaks, key=TRUE, trace="none", main="Matrisome", key.title = "Gene count", cexRow=0.1, cexCol=0.5, distfun = function(x) dist(x, method = "euclidean"), hclust = function(x) hclust(x, method = "ward.D2"), symkey = FALSE, density.info = "none", cex.axis = 5) 
 
+dev.off()
 
-
-```
-
-
-```{r}
-# Load required libraries
-library(gplots)
-
-# Remove rows where all values are 0
-merged_df_nozero <- merged_df[rowSums(merged_df[, -which(names(merged_df) == "genes")]) != 0, ]
-
-# Extract numeric matrix from merged_df, excluding the 'genes' column
-numeric_matrix <- as.matrix(merged_df_nozero[, -which(names(merged_df_nozero) == "genes")])
-
-# Create breaks and define palette
-breaks <- seq(-0.011, 0.011, length.out = 100)
-my_palette <- colorRampPalette(c("white", "blue"))(length(breaks) - 1)
-
-# Create heatmap using heatmap.2 with adjusted parameters
-heatmap.2(numeric_matrix,
-          col = my_palette,
-          breaks = breaks,
-          key = TRUE,
-          trace = "none",
-          main = "Matrisome",
-          key.title = "Gene count",
-          cexRow = 0.5,  # Adjust row label size
-          cexCol = 0.8,  # Adjust column label size
-          distfun = function(x) dist(x, method = "euclidean"),
-          hclust = function(x) hclust(x, method = "ward.D2"),
-          symkey = FALSE,
-          density.info = "none",
-          cex.axis = 1.2,  # Adjust axis label size
-          margins = c(10, 10),  # Adjust margins for dendrogram
-          dendrogram = "column"  # Show column dendrogram
-) +
-  custom_theme(base_size=20)
-
-ggsave(
-  "Matrisome_all.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/Matrisome"
-  )
-
+heatmap.2(numeric_matrix, col=my_palette, breaks = breaks, key=TRUE, trace="none", main="Matrisome", key.title = "Gene count", cexRow=0.1, cexCol=0.5, distfun = function(x) dist(x, method = "euclidean"), hclust = function(x) hclust(x, method = "ward.D2"), symkey = FALSE, density.info = "none", cex.axis = 5) 
 ```
 
 ### Session information

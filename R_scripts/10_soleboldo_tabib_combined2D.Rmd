@@ -7,7 +7,7 @@ output:
     theme: cayman
     toc: yes
 ---
-#Integrate Tabib and Sole seurat objects which contain 2D EP/ES/DS senpred predictions 
+#Integrate Tabib and Sole-Boldo seurat objects which contain 2D EP/ES/DS senpred predictions 
 ```{r}
 list <- list(querytabib, querysole)
 

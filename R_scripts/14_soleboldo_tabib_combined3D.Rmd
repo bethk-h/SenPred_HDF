@@ -189,6 +189,8 @@ breaks <- unique(c(seq(-1,-0.0001,length=50),seq(-0.00001,0.01,length=50), seq(0
 my_palette <- colorRampPalette(c("blue","white", "white", "red"))(length(breaks)-1)
 
 library("gplots")
+png(filename = "../Output/TabibSole_Integrated/Markercorrelation_DS_tabibsole.png", width = 800, height = 600)  # Set appropriate width and height
+
 
 heatmap <- heatmap.2(correlation_matrix, 
                      col = my_palette, 
@@ -207,12 +209,10 @@ heatmap <- heatmap.2(correlation_matrix,
                      density.info = c("none")) +
   custom_theme(base_size=20)
 
-ggsave(
-  "Markercorrelation_DS_tabibsole.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/TabibSole_Integrated"
-  )
+dev.off()
+
+print(heatmap)
+
 
 ```
 # Generating a correlation matrix of a panel of selected senescence genes - EP predicted cells
@@ -250,6 +250,7 @@ breaks <- unique(c(seq(-1,-0.0001,length=50),seq(-0.00001,0.01,length=50), seq(0
 my_palette <- colorRampPalette(c("blue","white", "white", "red"))(length(breaks)-1)
 
 library("gplots")
+png(filename = "../Output/TabibSole_Integrated/Markercorrelation_EP_tabibsole.png", width = 800, height = 600)  # Set appropriate width and height
 
 heatmap <- heatmap.2(correlation_matrix, 
                      col = my_palette, 
@@ -269,12 +270,9 @@ heatmap <- heatmap.2(correlation_matrix,
                      density.info = c("none")) +
   custom_theme(base_size=20)
 
-ggsave(
-  "Markercorrelation_EP_tabibsole.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/TabibSole_Integrated"
-  )
+dev.off()
+
+print(heatmap)
 ```
 # Extract example correlation plots
 ## CDKN1A vs CDKN2A

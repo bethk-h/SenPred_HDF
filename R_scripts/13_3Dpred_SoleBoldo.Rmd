@@ -48,7 +48,7 @@ v <- rownames(percentages)
 
 print(percentages)
 
-percentages_solefibs <- percentages
+percentages_solefibs3D <- percentages
 write.csv(percentages_solefibs3D, "../Output/SoleBoldo/EPDS3D_solefibs.csv")
 
 barplot_data <- percentages$DS3D
@@ -61,7 +61,7 @@ dev.off()
 ```
 
 ```{r}
-query2 <- query@meta.data
+query2 <- querysole3D@meta.data
 table <- table(query2[, c("age", "scpred_prediction")])
 table
 mat <- as.data.frame.matrix(table)
@@ -85,7 +85,7 @@ dev.off()
 ```
 
 ```{r}
-query2 <- query@meta.data
+query2 <- querysole3D@meta.data
 table <- table(query2[, c("SoleBoldo_name", "scpred_prediction")])
 table
 mat <- as.data.frame.matrix(table)

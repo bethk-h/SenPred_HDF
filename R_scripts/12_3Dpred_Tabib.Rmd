@@ -48,7 +48,7 @@ v <- rownames(percentages)
 
 print(percentages)
 
-percentages_tabibfibs <- percentages
+percentages_tabibfibs3D <- percentages
 write.csv(percentages_tabibfibs3D, "../Output/Tabib/EPDS3D_tabibfibs.csv")
 
 barplot_data <- percentages$DS3D
