@@ -1,0 +1,233 @@
+---
+title: "20_allskin_ganier"
+author: "BH"
+date: "2024-03-31"
+output:
+ pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
+#Testing the 3D model in all cell types from the dermis (not just fibroblasts)
+
+```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
+Tabib <- readRDS("../Inputfiles/Tabib_SeuratObject_AD23-Clusters (1).rds")
+hdf_mda2D <- readRDS(file = "hdf_mda2D.rds")
+hdf_mda3D <- readRDS(file="hdf_mda3D.rds")
+
+```
+
+
+#Ganier
+```{r}
+Ganier_56 <- readRDS("../Output/Ganier/ganierfiltered_56.rds")
+
+Ganier_59 <- readRDS("../Output/Ganier/ganierfiltered_59.rds")
+
+Ganier_62 <- readRDS("../Output/Ganier/ganierfiltered_62.rds")
+
+Ganier_70 <- readRDS("../Output/Ganier/ganierfiltered_70.rds")
+
+Ganier_73 <- readRDS("../Output/Ganier/ganierfiltered_73.rds")
+
+Ganier_77 <- readRDS("../Output/Ganier/ganierfiltered_77.rds")
+
+Ganier_78 <- readRDS("../Output/Ganier/ganierfiltered_78.rds")
+
+Ganier_80 <- readRDS("../Output/Ganier/ganierfiltered_80.rds")
+
+Ganier_81 <- readRDS("../Output/Ganier/ganierfiltered_81.rds")
+
+Ganier_85 <- readRDS("../Output/Ganier/ganierfiltered_85.rds")
+
+Ganier_86 <- readRDS("../Output/Ganier/ganierfiltered_86.rds")
+
+Ganier_90 <- readRDS("../Output/Ganier/ganierfiltered_90.rds")
+```
+
+```{r}
+Ganier_list <- list(
+  Ganier_56,
+  Ganier_59,
+  Ganier_62,
+  Ganier_70,
+  Ganier_73,
+  Ganier_77,
+  Ganier_78,
+  Ganier_80,
+  Ganier_81,
+  Ganier_85,
+  Ganier_86,
+  Ganier_90
+)
+```
+
+```{r}
+library(Seurat)
+
+# Assuming 'Ganier_list' is your list of Seurat objects
+
+# Define a function to run the code and save barplot for each Seurat object
+run_and_save_barplot <- function(seurat_object) {
+  # NormalizeData and scPredict
+  query <- NormalizeData(seurat_object)
+  query <- scPredict(query, hdf_mda3D)
+
+  # Extract metadata for further analysis
+  query2 <- query@meta.data
+  table <- table(query2[, c("age", "scpred_prediction")])
+  mat <- as.data.frame.matrix(table)
+  
+  # Calculate percentages
+  percentages <- (mat / rowSums(mat)) * 100
+  percentages <- na.omit(percentages)
+  percentages <- percentages[order(row.names(percentages)), ]
+  v <- rownames(percentages)
+
+  # Save the percentages data for each age group
+  for (age in unique(seurat_object@meta.data$age)) {
+    age_data <- percentages[which(rownames(percentages) == as.character(age)), "DS3D"]
+    percentages_file <- file.path("../Output/Ganier", paste0("Percentages_DS3D_by_age_", age, ".csv"))
+    write.csv(data.frame(age = age, percentage = age_data), file = percentages_file, row.names = FALSE)
+  }
+
+  # Create barplot for each age group
+  for (age in unique(seurat_object@meta.data$age)) {
+    age_data <- percentages[which(rownames(percentages) == as.character(age)), "DS3D"]
+    barplot_file <- file.path("../Output/Ganier", paste0("scPred3D_barplot_DS3Dbyage_", age, ".png"))
+    png(filename = barplot_file, width = 800, height = 600)
+    barplot(age_data, names = v, cex.names = 0.7, col = "darkblue",
+            main = "Percentage of predicted deeply senescent cells", xlab = "Age",
+            ylab = "Percentage", ylim = c(0, 100))
+    dev.off()
+  }
+}
+
+# Apply the function to your list of Seurat objects
+lapply(Ganier_list, run_and_save_barplot)
+
+
+
+```
+
+
+#Combining Tabib, Sole, and Ganier predictions for scatterplot - 3D
+
+```{r}
+Tabib <- read.csv("../Output/TabibALL/EPDS3D_tabibALL.csv")
+Sole <- read.csv("../Output/SoleBoldoALL/EPDS3D_soleall.csv")
+Ganier56 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_56.csv")
+Ganier59 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_59.csv")
+Ganier62 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_62.csv")
+Ganier70 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_70.csv")
+Ganier73 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_73.csv")
+Ganier77 <- read.csv("../Output/Ganier//Percentages_DS3D_by_age_77.csv")
+Ganier78 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_78.csv")
+Ganier80 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_80.csv")
+Ganier81 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_81.csv")
+Ganier85 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_85.csv")
+Ganier86 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_86.csv")
+Ganier90 <- read.csv("../Output/Ganier/Percentages_DS3D_by_age_90.csv")
+
+# Rename the first column to 'age' and the second column to 'percentage'
+Tabib <- filter(Tabib, variable == "DS3D")
+Tabib <- mutate(Tabib, age = Tabib[,2], percentage = Tabib[,4])
+
+# Remove the third and fourth columns
+Tabib <- select(Tabib, -c(1, 3:4))
+
+# Repeat the same process for other data frames
+Sole<- filter(Sole, variable == "DS3D")
+Sole <- mutate(Sole, age = Sole[,2], percentage = Sole[,4])
+Sole <- select(Sole, -c(1, 3:4))
+
+
+
+```
+
+
+```{r}
+# Create a list of data frames
+df_list <- list(Tabib, Sole, Ganier56, Ganier59, Ganier62, Ganier70, Ganier73, Ganier77, Ganier78, Ganier80, Ganier81, Ganier85, Ganier86, Ganier90)
+
+# Merge data frames based on column names
+merged_df <- Reduce(function(x, y) merge(x, y, by = intersect(names(x), names(y)), all = TRUE), df_list)
+
+# Print the merged data frame
+print(merged_df)
+
+
+file_path <- "../Output/allpercentagepredictions_ALL3D.csv"
+write.csv(merged_df, file = file_path, row.names = TRUE)
+```
+
+```{r}
+# Assuming merged_df is your merged data frame
+library(ggplot2)
+
+# Convert merged_df to long format
+merged_long <- tidyr::pivot_longer(merged_df, cols = -age, names_to = "variable", values_to = "value")
+
+# Convert 'age' to numeric
+merged_long$age <- as.numeric(merged_long$age)
+
+# Calculate Pearson correlation coefficient and p-value
+correlation_coefficient <- cor(merged_long$age, merged_long$value, method = "pearson")
+p_value <- cor.test(merged_long$age, merged_long$value)$p.value
+
+png(filename = "../Output/percentageDSpredicted_allcells_3D.png", width = 800, height = 600)  # Set appropriate width and height
+
+# Create a scatterplot with a trendline
+p <- ggplot(merged_long, aes(x = age, y = value)) +
+  geom_point(size = 3, color = "blue") +  # Make points larger and blue
+  geom_smooth(method = "lm", se = FALSE, color = "black", size = 0.7) +  # Add trendline
+  labs(title = NULL, x = "Age", y = "Percentage DS predicted cells") +
+  theme_minimal() +
+  theme(panel.grid = element_blank()) +  # Remove gridlines
+annotate("text", x = Inf, y = Inf, 
+         label = paste("Pearson correlation =", round(correlation_coefficient, digits = 3), 
+                       ", p =", round(p_value, digits = 3)), 
+         hjust = 1, vjust = 1, 
+         size = 4, color = "black", 
+         xjust = 1, yjust = 1)  # Move annotation to top right
+
+dev.off()
+
+p
+```
+
+
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.

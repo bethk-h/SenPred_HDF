@@ -1,16 +1,18 @@
 ---
 title: "1_HDF_data"
 author: "Bethany Hughes"
-date: "`r format(Sys.time(), '%d %B %Y')`"
+date: "24/09/2021"
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
-   
 ---
 
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
 ## Install/Load dependencies:
-```{r load_packages}
+```{r load_packages, results = FALSE}
 library(dplyr)
 library(Seurat)
 library(patchwork)
@@ -54,7 +56,7 @@ cells_with_metadata<-merge(rawUMI_cols,cell_labels,by="Barcode")
 ```
 
 # Creating Seurat object
-```{r}
+```{r, results=FALSE}
 hdfseurat <- CreateSeuratObject(counts = hdf.data, project = "MachineLearningSenescence", min.cells=3, min.features=200)
 hdfseurat
 
@@ -91,12 +93,16 @@ metadata_merge<-merge(metadata,x,by="Barcode")
 rownames(metadata_merge)<-metadata_merge$Barcode
 
 #Recreate Seurat object with new metadata, including genes which are expressed in at least 3 cells, and cells with more than 200 genes sequenced
-hdfseurat <- CreateSeuratObject(counts = hdf.data, project = "MachineLearningSenescence", min.cells=3, min.features=200, meta.data = metadata_merge)   
+hdfseurat <- CreateSeuratObject(counts = hdf.data, project = "MachineLearningSenescence", min.cells=3, min.features=200, meta.data = metadata_merge)  
+
+rds_file <- "hdfseurat.rds"
+
+saveRDS(hdfseurat, file = rds_file)
 
 ```
 
-# Session information
-```{r session_info_99}
+### Session information
+```{r, echo=FALSE}
 sessionInfo()
 ```
 

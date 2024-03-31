@@ -1,0 +1,208 @@
+---
+title: "22_lungs2"
+author: "BH"
+date: "2024-03-31"
+output:
+ pdf_document:
+    toc: yes
+---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+#library("EnsDb.Hsapiens.v86")
+
+
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
+
+```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
+hdf_mda2D <- readRDS(file = "hdf_mda2D.rds")
+hdf_mda3D <- readRDS(file="hdf_mda3D.rds")
+lung_fibroblast4_filt <- readRDS(file="../Output/lung_fibroblast4_filt.rds")
+```
+
+
+## Plotting top 10 variable features in the cells
+```{r}
+
+#Selecting highly variable features - high cell to cell variation
+lung_fibroblast4_filt <- FindVariableFeatures(lung_fibroblast4_filt, selection.method ="vst", nfeatures=2000)
+#Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(lung_fibroblast4_filt), 10)
+top10
+plot3 <- VariableFeaturePlot(lung_fibroblast4_filt)
+#Plot variable features with labels
+plot4 <- LabelPoints(plot=plot3, points = top10, repel=TRUE)
+plot4
+
+ggsave(
+  "variablefeatures.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+```
+## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
+```{r}
+all.genes <- rownames(lung_fibroblast4_filt)
+lung_fibroblast4_filt <- ScaleData(lung_fibroblast4_filt, features = all.genes)
+
+#Performing a PCA
+lung_fibroblast4_filt <- RunPCA(lung_fibroblast4_filt, features=VariableFeatures(object = lung_fibroblast4_filt))
+
+#Plotting the PCA
+PCA_no_label <- DimPlot(lung_fibroblast4_filt, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
+PCA_age_or_mean_of_age_range_label <- DimPlot(lung_fibroblast4_filt, reduction = "pca", seed = 123, group.by = "age_or_mean_of_age_range")
+
+PCA_no_label
+PCA_age_or_mean_of_age_range_label
+```
+
+
+## Heatmaps to investigate the genes influencing the top PCs
+```{r}
+DimHeatmap(lung_fibroblast4_filt, dims=1, cells=500, balanced=TRUE)
+DimHeatmap(lung_fibroblast4_filt, dims=1:15, cells=500, balanced=TRUE)
+ElbowPlot(lung_fibroblast4_filt) 
+
+#Suggests top 10 PCs explain most of the variance. Test this with jackstraw plot
+#hdfseurat_jackstraw <- JackStraw(lung_fibroblast4_filt, num.replicate = 100)
+#hdfseurat_jackstraw <- ScoreJackStraw(hdfseurat_jackstraw, dims = 1:20)
+#JackStrawPlot(hdfseurat_jackstraw, dims = 1:15)
+```
+
+## Clustering the cells using KNN
+```{r}
+#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
+lung_fibroblast4_filt <- FindNeighbors(lung_fibroblast4_filt, dims =1:10)
+
+#group cells using findclusters function
+lung_fibroblast4_filt <- FindClusters(lung_fibroblast4_filt, resolution = 0.4)
+
+#Look at cluster ID's of first 5 cells
+head(Idents(lung_fibroblast4_filt), 5)
+```
+
+## Plot UMAP
+```{r}
+#Running a UMAP
+lung_fibroblast4_filt <- RunUMAP(lung_fibroblast4_filt, dims=1:10)
+
+
+#Plotting UMAP with cluster IDs
+DimPlot(lung_fibroblast4_filt, reduction = "umap", seed = 123 ) 
+
+ggsave(
+  "UMAP_clusters.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+
+#Colouring above UMAP plot with age_or_mean_of_age_range type
+DimPlot(lung_fibroblast4_filt, reduction = "umap",group.by = "age_or_mean_of_age_range") 
+ggsave(
+  "UMAP_age_or_mean_of_age_rangecolour.tiff",
+  plot = last_plot(),
+  device = "tiff",
+  path = "../Output/LungAtlas"
+  )
+```
+
+```{r}
+query <- scPredict(lung_fibroblast4_filt, hdf_mda3D)
+# Extract metadata for further analysis
+  query2 <- query@meta.data
+  table <- table(query2[, c("age_or_mean_of_age_range", "scpred_prediction")])
+  mat <- as.data.frame.matrix(table)
+  
+  # Calculate percentages and create barplot
+  percentages <- (mat / rowSums(mat)) * 100
+  percentages <- na.omit(percentages)
+  percentages <- percentages[order(row.names(percentages)), ]
+  v <- rownames(percentages)
+  
+  # Create barplot
+  barplot_data <- percentages$DS3D
+  barplot_names <- v
+  
+  barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue",
+          main = "Percentage of predicted deeply senescent cells", xlab = "Age",
+          ylab = "Percentage", ylim = c(0, 100))
+  
+
+library(ggplot2)
+library(ggpubr)  # For statistical annotations
+
+  # Extract the first column of the percentages dataframe
+percent_DS <- percentages[, 1]
+
+# Extract the row names of the percentages dataframe
+age <- rownames(percentages)
+
+result <- data.frame(age = age, percent_DS = percent_DS)
+
+result$age <- as.numeric(result$age)
+
+# Assuming data is your long-format data frame
+library(ggplot2)
+# Convert merged_df to long format
+merged_long <- tidyr::pivot_longer(result, cols = -age, names_to = "variable", values_to = "value")
+
+# Convert 'age' to numeric
+merged_long$age <- as.numeric(merged_long$age)
+
+# Calculate Pearson correlation coefficient and p-value
+correlation_coefficient <- cor(merged_long$age, merged_long$value, method = "pearson")
+p_value <- cor.test(merged_long$age, merged_long$value)$p.value
+
+png(filename = "../Output/LungAtlas/percentageDSpredicted_lungcells_3D.png", width = 800, height = 600)  # Set appropriate width and height
+
+# Create a scatterplot with a trendline
+p <- ggplot(merged_long, aes(x = age, y = value)) +
+  geom_point(size = 3, color = "blue") +  # Make points larger and blue
+  geom_smooth(method = "lm", se = FALSE, color = "black", size = 0.7) +  # Add trendline
+  labs(title = NULL, x = "Age", y = "Percentage DS predicted cells") +
+  theme_minimal() +
+  theme(panel.grid = element_blank()) +  # Remove gridlines
+annotate("text", x = Inf, y = Inf, 
+         label = paste("Pearson correlation =", round(correlation_coefficient, digits = 3), 
+                       ", p =", round(p_value, digits = 3)), 
+         hjust = 1, vjust = 1, 
+         size = 4, color = "black", 
+         xjust = 1, yjust = 1)  # Move annotation to top right
+
+dev.off()
+
+p
+
+```
+
+### Session information
+```{r, echo=FALSE}
+sessionInfo()
+```
+
+This document was processed on: `r Sys.Date()`.

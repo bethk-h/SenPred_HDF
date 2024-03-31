@@ -3,13 +3,41 @@ title: "11_ScPred_3D"
 author: "BH"
 date: '2022-04-22'
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
 
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
 # Filtering Seurat to select just 3D cells for clustering 
 ```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
+hdfseurat_filt <- readRDS(file = "hdfseurat_filt.rds")
+
 hdfseurat_filt_3D <- subset(hdfseurat_filt, Sample == "DS3D" | Sample == "EP3D")
 ```
 
@@ -172,7 +200,7 @@ saveRDS(testing, file =  "../Output/Seurat_Objects/hdfseuratfiltered_3Dtesting_E
 #testing <- readRDS("../Input/Seurat_Objects/hdfseuratfiltered_3Dtesting.rds")
 ```
 
-```{r}
+```{r, results = FALSE}
 #Using the training dataset to create and evaluate different models - no PC filters
 
 hdfseurat_scPred <- getFeatureSpace(training, "Sample")
@@ -429,6 +457,12 @@ draw_confusion_matrix <- function(cm, output_file) {
 your_confusion_matrix <- cm
 output_file_path <- "../Output/HDF_ScPred/scPred3D_MDA_CM.png"
 draw_confusion_matrix(your_confusion_matrix, output_file_path)
+
+```
+
+```{r}
+saveRDS(hdf_mda3D, file = "hdf_mda3D.rds")
+saveRDS(hdfseurat_filt_3D, file="hdfseurat_filt_3D.rds")
 
 ```
 

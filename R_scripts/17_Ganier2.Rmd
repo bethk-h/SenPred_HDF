@@ -1,0 +1,456 @@
+---
+title: "17_Ganier2"
+author: "BH"
+date: "2024-03-28"
+output:
+ pdf_document:
+       toc: yes
+---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
+
+```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
+```
+
+```{r}
+Ganier_56 <- readRDS("../Output/Ganier/ganierfiltered_56.rds")
+
+Ganier_59 <- readRDS("../Output/Ganier/ganierfiltered_59.rds")
+
+Ganier_62 <- readRDS("../Output/Ganier/ganierfiltered_62.rds")
+
+Ganier_70 <- readRDS("../Output/Ganier/ganierfiltered_70.rds")
+
+Ganier_73 <- readRDS("../Output/Ganier/ganierfiltered_73.rds")
+
+Ganier_77 <- readRDS("../Output/Ganier/ganierfiltered_77.rds")
+
+Ganier_78 <- readRDS("../Output/Ganier/ganierfiltered_78.rds")
+
+Ganier_80 <- readRDS("../Output/Ganier/ganierfiltered_80.rds")
+
+Ganier_81 <- readRDS("../Output/Ganier/ganierfiltered_81.rds")
+
+Ganier_85 <- readRDS("../Output/Ganier/ganierfiltered_85.rds")
+
+Ganier_86 <- readRDS("../Output/Ganier/ganierfiltered_86.rds")
+
+Ganier_90 <- readRDS("../Output/Ganier/ganierfiltered_90.rds")
+```
+
+```{r}
+Ganier_list <- list(
+  Ganier_56,
+  Ganier_59,
+  Ganier_62,
+  Ganier_70,
+  Ganier_73,
+  Ganier_77,
+  Ganier_78,
+  Ganier_80,
+  Ganier_81,
+  Ganier_85,
+  Ganier_86,
+  Ganier_90
+)
+```
+
+#Clustering to identify fibroblasts
+```{r}
+analyze_seurat_objects <- function(Gan_object, output_path = "../Output/Ganier") {
+  # Extract age
+  age <- unique(Gan_object@meta.data$age)
+  print(paste("Processing Seurat object with age:", age))
+
+  # Identify variable features and plot
+  Gan_object <- FindVariableFeatures(Gan_object, selection.method = "vst", nfeatures = 2000)
+  top10 <- head(VariableFeatures(Gan_object), 10)
+  plot3 <- VariableFeaturePlot(Gan_object)
+  plot4 <- LabelPoints(plot = plot3, points = top10, repel = TRUE)
+  
+  # Save Variable Features Plot
+  ggsave(
+    file.path(output_path, paste0("variable_features_", "Age_", age, ".tiff")),
+    plot = last_plot(),
+    device = "tiff",
+    width = 15,  # adjust as needed
+    height = 12,  # adjust as needed
+    scale = 1.5  # adjust as needed
+  )
+  
+  # Scaling and PCA
+  all.genes <- rownames(Gan_object)
+  Gan_object <- ScaleData(Gan_object, features = all.genes)
+  Gan_object <- RunPCA(Gan_object, features = VariableFeatures(object = Gan_object))
+  
+  # Plot PCA
+  PCA_no_label <- DimPlot(Gan_object, reduction = "pca", seed = 123, combine = TRUE) + NoLegend()
+  
+  # Save PCA Plot
+  ggsave(
+    file.path(output_path, paste0("PCA_no_label_", "Age_", age, ".tiff")),
+    plot = PCA_no_label,
+    device = "tiff",
+    width = 15,  # adjust as needed
+    height = 12,  # adjust as needed
+    scale = 1.5  # adjust as needed
+  )
+  
+  # Heatmaps
+  DimHeatmap(Gan_object, dims = 1, cells = 500, balanced = TRUE)
+  DimHeatmap(Gan_object, dims = 1:15, cells = 500, balanced = TRUE)
+  ElbowPlot(Gan_object)
+  
+  # Clustering using KNN
+  Gan_object <- FindNeighbors(Gan_object, dims = 1:10)
+  Gan_object <- FindClusters(Gan_object, resolution = 0.4)
+  head(Idents(Gan_object), 5)
+  
+  # Plot UMAP
+  Gan_object <- RunUMAP(Gan_object, dims = 1:10)
+  # Create and Save UMAP Plot
+  umap_plot <- DimPlot(Gan_object, reduction = "umap", seed = 123)
+  
+  # Save UMAP Plot
+  ggsave(
+    file.path(output_path, paste0("UMAP_Ganier_", "Age_", age, ".tiff")),
+    plot = last_plot(),
+    device = "tiff",
+    width = 15,  # adjust as needed
+    height = 12,  # adjust as needed
+    scale = 1.5  # adjust as needed
+  )
+  
+  # Dotplot
+  features_to_plot <- c("SARAF", "RORA", "CCL5", "NKG7", "APOD", "APOE", "CD69", "TNF", "CTLA4", "TIGIT", "C1QA", "CCL3", "HLA-DRA", "LYZ", "SFRP2", "WISP2", "TAGLN", "MYL9", "POSTN", "COL3A1", "RGS5", "STEAP4", "TM4SF1", "IFI27", "PTPRC", "SRSF7", "XCL1", "XCL2", "LY6D", "KRT1", "CD37", "BANK1", "KRT17", "PTCH1", "IL1B", "CXCL8", "TPSB2", "KIT", "PMEL", "TRYP1", "ACAN", "COL2A1", "CST3", "CPVL", "CCL21", "MMRN1", "JCHAIN", "IGHA1", "PTGDS", "ASPN", "CCL17", "CCL22", "IL8", "FCER1A", "CDH19", "SCN7A", "ACTA2", "DES", "MYLPF", "MYL1")
+
+  DotPlot(
+    Gan_object,
+    features = features_to_plot,
+    assay = NULL,
+    cols = c("lightgrey", "blue"),
+    col.min = -2.5,
+    col.max = 2.5,
+    dot.min = 0,
+    dot.scale = 6,
+    idents = NULL,
+    group.by = NULL,
+    split.by = NULL,
+    cluster.idents = FALSE,
+    scale = TRUE,
+    scale.by = "radius",
+    scale.min = NA,
+    scale.max = NA
+  ) +
+  # Adjust x-axis labels in DotPlot
+  theme(axis.text.x = element_text(size = 8, angle = 90))
+  
+  # Save DotPlot
+  ggsave(
+    file.path(output_path, paste0("DotPlots_", "Age_", age, ".tiff")),
+    plot = last_plot(),
+    device = "tiff",
+    width = 15,  # adjust as needed
+    height = 12,  # adjust as needed
+    scale = 1.5  # adjust as needed
+  )
+}
+
+lapply(Ganier_list, analyze_seurat_objects)
+
+
+
+```
+
+
+## Subset to get just fibs
+```{r}
+# Assuming 'Ganier_list' is your list of Seurat objects
+
+# Install and load the Seurat package if not already installed
+# install.packages("Seurat")
+# library(Seurat)
+
+# Assuming the Seurat objects are already created and stored in 'Ganier_list'
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[1]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 2, 5)
+
+# Filter cells based on the specified clusters
+Ganier_56_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_56_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[2]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 4)
+
+# Filter cells based on the specified clusters
+Ganier_59_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_59_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[3]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(2, 4)
+
+# Filter cells based on the specified clusters
+Ganier_62_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_62_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[4]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 4, 8)
+
+# Filter cells based on the specified clusters
+Ganier_70_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_70_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[5]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(4)
+
+# Filter cells based on the specified clusters
+Ganier_73_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_73_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[6]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 6)
+
+# Filter cells based on the specified clusters
+Ganier_77_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_77_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[7]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(0, 1, 5)
+
+# Filter cells based on the specified clusters
+Ganier_78_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_78_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[8]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(4)
+
+# Filter cells based on the specified clusters
+Ganier_80_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_80_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[9]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 6, 7)
+
+# Filter cells based on the specified clusters
+Ganier_81_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_81_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[10]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(2, 4)
+
+# Filter cells based on the specified clusters
+Ganier_85_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_85_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[11]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(1, 4, 7)
+
+# Filter cells based on the specified clusters
+Ganier_86_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_86_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+
+
+# Load required Seurat object
+library(Seurat)
+# Replace 'YourSeuratObjectName' with the actual name of your Seurat object
+seurat_object <- Ganier_list[[12]]
+
+# Subset cells based on seurat_cluster values
+selected_clusters <- c(2, 6)
+
+# Filter cells based on the specified clusters
+Ganier_90_filt <- subset(seurat_object, cells = which(seurat_object@meta.data$seurat_cluster %in% selected_clusters))
+
+# Print the summary to check the changes
+summary(Ganier_90_filt)
+
+# Now 'filtered_seurat_object' contains only the cells with seurat_cluster values of 1, 2, or 5
+
+```
+
+## Saving seurat objects
+```{r}
+filt_list <- list(Ganier_56_filt, Ganier_59_filt, Ganier_62_filt, Ganier_70_filt, Ganier_73_filt, Ganier_77_filt, Ganier_78_filt, Ganier_80_filt, Ganier_81_filt, Ganier_85_filt, Ganier_86_filt, Ganier_90_filt)
+
+save_filtered_seurat_objects <- function(seurat_list, output_dir = "../Output/FilteredGanier/") {
+  # Create the output directory if it doesn't exist
+  if (!file.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
+
+  # Loop through each Seurat object in the list
+  for (i in seq_along(seurat_list)) {
+    seurat_object <- seurat_list[[i]]
+    
+    # Extract age value from @meta.data
+    age_value <- unique(seurat_object@meta.data$age)
+
+    # Replace spaces with underscores and remove special characters
+    sanitized_age <- gsub("[[:space:]]", "_", age_value)
+
+    # Generate the output filename
+    output_filename <- paste0(output_dir, "filteredseurat_Ganier_", sanitized_age, ".rds")
+
+    # Save the filtered Seurat object
+    saveRDS(seurat_object, file = output_filename)
+    
+    cat("Saved:", output_filename, "\n")
+  }
+}
+
+# Example usage assuming 'filt_list' is your list of filtered Seurat objects
+save_filtered_seurat_objects(filt_list)
+
+```
+
+
+### Session information
+```{r session_info_99}
+sessionInfo()
+```
+

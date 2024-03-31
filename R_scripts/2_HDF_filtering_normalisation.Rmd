@@ -3,10 +3,29 @@ title: "2_HDF_filtering_normalisation"
 author: "Beth"
 date: "24/09/2021"
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+  pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+## Install/Load dependencies:
+```{r load_packages, results = FALSE}
+library(dplyr)
+library(Seurat)
+library(patchwork)
+library(readxl)
+library(tidyseurat)
+library(ggplot2)
+library(tidyverse)
+library(RCurl)
+library(cowplot)
+library(sctransform)
+library(here)
+library(stringr)
+library(reshape2)
+library(ggplot2)
+```
 
 # Cell-level filtering
 See: [https://hbctraining.github.io/scRNA-seq_online/lessons/04_SC_quality_control.html](https://hbctraining.github.io/scRNA-seq_online/lessons/04_SC_quality_control.html)
@@ -33,10 +52,14 @@ custom_theme <- function(base_size = 12) {
       panel.border = element_blank() 
     )
 }
+
+saveRDS(custom_theme, file="custom_theme.rds")
 ```
 
 ##Investigating cell numbers
 ```{r}
+hdfseurat <- readRDS(file = "hdfseurat.rds")
+
 #Note - mitochondrial percentage has been added to metadata in previous script 1_HDF_data.Rmd. Adding no. of genes per UMI.
 hdfseurat$log10GenesPerUMI <- log10(hdfseurat$nFeature_RNA) / log10(hdfseurat$nCount_RNA)
 
@@ -231,11 +254,15 @@ ggsave(
 # Normalisation - Normalise gene expression per cell by the total gene expression within that cell. This is then multiplied by a default scale factor (10,000), and log-transformed.
 ```{r}
 hdfseurat_filt <- NormalizeData(hdfseurat_filt)
+
+saveRDS(hdfseurat_filt, file = "hdfseurat_filt.rds")
 ```
 
 ### Session information
-```{r session_info_99}
+```{r, echo=FALSE}
 sessionInfo()
 ```
 
 This document was processed on: `r Sys.Date()`.
+
+

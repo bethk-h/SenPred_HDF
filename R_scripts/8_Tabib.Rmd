@@ -3,13 +3,43 @@ title: "8_Tabib"
 author: "BH"
 date: '2022-04-25'
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
 # Loading in whole skin scRNA sequencing dataset from Tabib et al, to test the 2D SenPred model. 
 Tabib, T., Morse, C., Wang, T., Chen, W. and Lafyatis, R., 2018. SFRP2/DPP4 and FMO1/LSP1 define major fibroblast populations in human skin. Journal of Investigative Dermatology, 138(4), pp.802-810.
 ```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
+hdf_mda2D <- readRDS(file = "hdf_mda2D.rds")
+HDF_Chan_combined_scPred <- readRDS(file ="HDF_Chan_combined_scPred.rds")
+
 Tabib <- readRDS("../Inputfiles/Tabib_SeuratObject_AD23-Clusters (1).rds")
 Idents(object = Tabib) <- Tabib$Tabib_name
 
@@ -435,6 +465,11 @@ ggsave("barplot_stacked_2Dpred_age.tiff",
   device = "tiff",
   path = "../Output/Tabib"
   )
+
+```
+```{r}
+saveRDS(querytabib, file="querytabib.rds")
+saveRDS(Tabib_fibs2, file="Tabib_fibs2.rds")
 
 ```
 

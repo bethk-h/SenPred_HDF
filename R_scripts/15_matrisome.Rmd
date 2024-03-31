@@ -3,15 +3,47 @@ title: "15_Matrisome"
 author: "BH"
 date: "2024-02-07"
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
 # Matrisome genes were imported from the Matrisome project: https://sites.google.com/uic.edu/matrisome/home?authuser=0
 The genes imported were the NABA_MATRISOME human gene set. 
 
 ```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
+Tabib_fibs2 <- readRDS(file="Tabib_fibs2.rds")
+Sole_fibs2 <- readRDS(file="Sole_fibs2.rds")
+hdfseurat_filt_2D <- readRDS(file = "../Output/Seurat_Objects/hdfseuratfiltered_2Dcells.rds")
+hdfseurat_filt_3D <- readRDS(file="hdfseurat_filt_3D.rds")
 matrisome <- read.csv ("../Inputfiles/matrisome.csv", header = FALSE)
+
 ```
 
 ```{r}
@@ -37,9 +69,6 @@ row_medians <- apply(filtered_df, 1, median)
 
 # Create a dataframe with only row medians
 median_df_2D <- data.frame("mediancounts_2D" = row_medians, row.names = rownames(filtered_df))
-
-
-print(median_df_2D)
 
 ```
 
@@ -67,7 +96,6 @@ row_medians <- apply(filtered_df, 1, median)
 # Create a dataframe with only row medians
 median_df_3D <- data.frame("mediancounts_3D" = row_medians, row.names = rownames(filtered_df))
 
-print(median_df_3D)
 
 ```
 
@@ -94,8 +122,6 @@ row_medians <- apply(filtered_df, 1, median)
 # Create a dataframe with only row medians
 median_df_tabib <- data.frame("mediancounts_Tabib" = row_medians, row.names = rownames(filtered_df))
 
-# Print or use median_df as needed
-print(median_df_tabib)
 
 ```
 
@@ -122,8 +148,6 @@ row_medians <- apply(filtered_df, 1, median)
 # Create a dataframe with only row medians
 median_df_sole <- data.frame("mediancounts_Sole" = row_medians, row.names = rownames(filtered_df))
 
-# Print or use median_df as needed
-print(median_df_sole)
 
 ```
 
@@ -132,8 +156,6 @@ print(median_df_sole)
 # Check common row names
 common_row_names <- Reduce(intersect, list(rownames(median_df_2D), rownames(median_df_3D), rownames(median_df_sole), rownames(median_df_tabib)))
 
-# Print common row names
-print(common_row_names)
 
 # Subset the dataframes to include only the common row names and the column representing median counts
 median_df_2D_subset <- median_df_2D[common_row_names, "mediancounts_2D", drop = FALSE]
@@ -147,7 +169,6 @@ merged_df <- cbind(median_df_2D_subset, median_df_3D_subset, median_df_sole_subs
 # Rename the row names column
 rownames(merged_df) <- common_row_names
 
-print(merged_df)
 
 
 ```

@@ -3,13 +3,42 @@ title: "13_3Dpred_SoleBoldo"
 author: "BH"
 date: "2023-03-09"
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
 
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
 # Testing ScPred 3D ML models on Sole-Boldo datasets
 ```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
+Sole_fibs2 <- readRDS(file="Sole_fibs2.rds")
+hdf_mda3D <- readRDS(file="hdf_mda3D.rds")
+
 #MDA radial model
 querysole3D <- NormalizeData(Sole_fibs2)
 querysole3D <- scPredict(querysole3D, hdf_mda3D)
@@ -106,6 +135,10 @@ png(filename = "../Output/SoleBoldo/scPred3D_barplot_DS3Dbycellidentity.png", wi
 barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue", main = "Percentage of predicted deeply senescent cells", xlab="Cell Identity",
          ylab = "Percentage", ylim = c(0, 100))
 dev.off() 
+```
+
+```{r}
+saveRDS(querysole3D, file="querysole3D.rds")
 ```
 
 ### Session information

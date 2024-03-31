@@ -1,18 +1,46 @@
 ---
-title: "17_alldermal_celltypes"
+title: "19_alldermal_celltypes"
 author: "BH"
 date: "2024-03-21"
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
 
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
 #Testing the 3D model in all cell types from the dermis (not just fibroblasts)
 
 ##Tabib 
 ```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
 Tabib <- readRDS("../Inputfiles/Tabib_SeuratObject_AD23-Clusters (1).rds")
+hdf_mda2D <- readRDS(file = "hdf_mda2D.rds")
+hdf_mda3D <- readRDS(file="hdf_mda3D.rds")
 
 ```
 ## Applying same QC metrics as my data to test for outliers. 
@@ -276,7 +304,7 @@ head(Idents(Tabib2), 5)
 #Running a UMAP
 Tabib2 <- RunUMAP(Tabib2, dims=1:10)
 
-DimPlot(Tabib2, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48")) +
+DimPlot(Tabib2, reduction = "umap", seed = 123) +
   custom_theme(base_size=20)
 ggsave(
   "UMAP_clusters_all.tiff",
@@ -285,7 +313,7 @@ ggsave(
   path = "../Output/TabibALL"
   )
 
-DimPlot(Tabib2, reduction = "umap", seed = 123, group.by="Tabib_name", cols = c("#2e5266", "#ecb0e1", "#832232", "#a6a867", "#bc5f04", "#f9a52c")) + 
+DimPlot(Tabib2, reduction = "umap", seed = 123, group.by="Tabib_name") + 
   custom_theme(base_size=20)
 ggsave(
   "UMAP_clusters_all_Sample.tiff",
@@ -346,7 +374,7 @@ perc <- melt(df)
 v <- perc$age
 
 percentages_Tabib3D_ALL <- perc
-write.csv(percentages_Tabib3D_ALL, "../Output/Tabib/EPDS3D_tabibALL.csv")
+write.csv(percentages_Tabib3D_ALL, "../Output/TabibALL/EPDS3D_tabibALL.csv")
 #convert 'variable' to factor and specify level order
 perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', 'DS2D'))
 
@@ -635,7 +663,7 @@ head(Idents(Sole2), 5)
 #Running a UMAP
 Sole2 <- RunUMAP(Sole2, dims=1:10)
 
-DimPlot(Sole2, reduction = "umap", seed = 123, cols = c("#9b5fe0", "#16a5d8", "#60dbe8", "#8bd346", "#efdf48", "#f9a52c", "#d64e12", "#652A0E", "tan3", "peachpuff", "blue", "red", "brown")) +
+DimPlot(Sole2, reduction = "umap", seed = 123) +
   custom_theme(base_size=20)
 ggsave(
   "UMAP_clusters_all.tiff",
@@ -645,7 +673,7 @@ ggsave(
   )
 
 
-DimPlot(Sole2, reduction = "umap", seed = 123, group.by="SoleBoldo_name", cols = c("#2e5266", "#ecb0e1", "#832232", "#a6a867", "#bc5f04", "#f9a52c"))+
+DimPlot(Sole2, reduction = "umap", seed = 123, group.by="SoleBoldo_name")+
   custom_theme(base_size=20)
 ggsave(
   "UMAP_clusters_all_Sample.tiff",
@@ -725,236 +753,6 @@ ggsave("barplot_stacked_3Dpred_age.tiff",
   )
 
 ```
-
-#Ganier
-```{r}
-Ganier_56 <- readRDS("../Output/Ganier/ganierfiltered_56.rds")
-
-Ganier_59 <- readRDS("../Output/Ganier/ganierfiltered_59.rds")
-
-Ganier_62 <- readRDS("../Output/Ganier/ganierfiltered_62.rds")
-
-Ganier_70 <- readRDS("../Output/Ganier/ganierfiltered_70.rds")
-
-Ganier_73 <- readRDS("../Output/Ganier/ganierfiltered_73.rds")
-
-Ganier_77 <- readRDS("../Output/Ganier/ganierfiltered_77.rds")
-
-Ganier_78 <- readRDS("../Output/Ganier/ganierfiltered_78.rds")
-
-Ganier_80 <- readRDS("../Output/Ganier/ganierfiltered_80.rds")
-
-Ganier_81 <- readRDS("../Output/Ganier/ganierfiltered_81.rds")
-
-Ganier_85 <- readRDS("../Output/Ganier/ganierfiltered_85.rds")
-
-Ganier_86 <- readRDS("../Output/Ganier/ganierfiltered_86.rds")
-
-Ganier_90 <- readRDS("../Output/Ganier/ganierfiltered_90.rds")
-```
-
-```{r}
-Ganier_list <- list(
-  Ganier_56,
-  Ganier_59,
-  Ganier_62,
-  Ganier_70,
-  Ganier_73,
-  Ganier_77,
-  Ganier_78,
-  Ganier_80,
-  Ganier_81,
-  Ganier_85,
-  Ganier_86,
-  Ganier_90
-)
-```
-
-```{r}
-library(Seurat)
-
-# Assuming 'Ganier_list' is your list of Seurat objects
-
-# Define a function to run the code and save barplot for each Seurat object
-run_and_save_barplot <- function(seurat_object) {
-  # NormalizeData and scPredict
-  query <- NormalizeData(seurat_object)
-  query <- scPredict(query, hdf_mda3D)
-
-  # Extract metadata for further analysis
-  query2 <- query@meta.data
-  table <- table(query2[, c("age", "scpred_prediction")])
-  mat <- as.data.frame.matrix(table)
-  
-  # Calculate percentages and create barplot
-  percentages <- (mat / rowSums(mat)) * 100
-  percentages <- na.omit(percentages)
-  percentages <- percentages[order(row.names(percentages)), ]
-  v <- rownames(percentages)
-
-  # Save the percentages data for each Seurat object
-  percentages_file <- file.path("../Output/Ganier", paste0("Percentages_DS3D_all_by_age_", seurat_object@meta.data$age, ".csv"))
-  write.csv(percentages, file = percentages_file)
-
-  # Create barplot
-  barplot_data <- percentages$DS3D
-  barplot_names <- v
-
-  barplot_file <- file.path("../Output/Ganier", paste0("scPred3D_barplot_DS3D_all_byage_", seurat_object@meta.data$age, ".png"))
-  png(filename = barplot_file, width = 800, height = 600)
-  barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue",
-          main = "Percentage of predicted deeply senescent cells", xlab = "Age",
-          ylab = "Percentage", ylim = c(0, 100))
-  dev.off()
-}
-
-# Apply the function to your list of Seurat objects
-lapply(Ganier_list, run_and_save_barplot)
-
-
-```
-
-
-#Combining Tabib, Sole, and Ganier predictions for scatterplot - 3D
-
-```{r}
-Tabib <- read.csv("../Output/TabibALL/EPDS3D_tabibfibs.csv")
-Sole <- read.csv("../Output/SoleBoldoALL/EPDS3D_solefibs.csv")
-Ganier56 <- read.csv("../Output/Ganier/Percentages_DS3D_all_by_age_56.csv")
-Ganier59 <- read.csv("../Output/Ganier/Percentages_DS3D_all_by_age_59.csv")
-Ganier62 <- read.csv("../Output/Ganier/Percentages_DS3D_all_by_age_62.csv")
-Ganier70 <- read.csv("../Output/Ganier/Percentages_DS3D_all_by_age_70.csv")
-Ganier73 <- read.csv("../Output/Ganier/Percentages_DS3D_all_by_age_73.csv")
-Ganier77 <- read.csv("../Output/Ganier//Percentages_DS3D_all_by_age_77.csv")
-Ganier78 <- read.csv("../Output/Ganier/Percentages_DS3D_all_by_age_78.csv")
-Ganier81 <- read.csv("../Output/Ganier/Percentages_DS3D_all_by_age_81.csv")
-Ganier90 <- read.csv("../Output/Ganier/Percentages_DS3D_all_by_age_90.csv")
-
-# Set the first column as row names
-rownames(Ganier56) <- Ganier56[, 1]
-
-# Remove the first column (it is now redundant)
-Ganier56 <- Ganier56[, -1]
-
-# Set the first column as row names
-rownames(Ganier59) <- Ganier59[, 1]
-
-# Remove the first column (it is now redundant)
-Ganier59 <- Ganier59[, -1]
-
-# Set the first column as row names
-rownames(Ganier62) <- Ganier62[, 1]
-
-# Remove the first column (it is now redundant)
-Ganier62 <- Ganier62[, -1]
-
-# Set the first column as row names
-rownames(Ganier70) <- Ganier70[, 1]
-
-# Remove the first column (it is now redundant)
-Ganier70 <- Ganier70[, -1]
-
-# Set the first column as row names
-rownames(Ganier73) <- Ganier73[, 1]
-
-# Remove the first column (it is now redundant)
-Ganier73 <- Ganier73[, -1]
-
-# Set the first column as row names
-rownames(Ganier77) <- Ganier77[, 1]
-
-# Remove the first column (it is now redundant)
-Ganier77 <- Ganier77[, -1]
-
-# Set the first column as row names
-rownames(Ganier78) <- Ganier78[, 1]
-
-# Remove the first column (it is now redundant)
-Ganier78 <- Ganier78[, -1]
-
-# Set the first column as row names
-rownames(Ganier81) <- Ganier81[, 1]
-
-# Remove the first column (it is now redundant)
-Ganier81 <- Ganier81[, -1]
-
-
-rownames(Ganier90) <- Ganier90[, 1]
-
-# Remove the first column (it is now redundant)
-Ganier90 <- Ganier90[, -1]
-
-# Set the first column as row names
-rownames(Tabib) <- Tabib[, 1]
-
-# Remove the first column (it is now redundant)
-Tabib <- Tabib[, -1]
-
-# Set the first column as row names
-rownames(Sole) <- Sole[, 1]
-
-# Remove the first column (it is now redundant)
-Sole <- Sole[, -1]
-
-```
-
-
-```{r}
-# Create a list of data frames
-df_list <- list(Tabib, Sole, Ganier56, Ganier59, Ganier62, Ganier70, Ganier73, Ganier77, Ganier78, Ganier81, Ganier90)
-
-# Extract row names and create a new column "age" in each data frame
-for (i in seq_along(df_list)) {
-  df_list[[i]]$age <- rownames(df_list[[i]])
-}
-
-# Merge data frames based on common columns
-merged_df <- Reduce(function(x, y) merge(x, y, by = intersect(names(x), names(y)), all = TRUE), df_list)
-
-# Print the merged data frame
-print(merged_df)
-
-file_path <- "../Output/allpercentagepredictions_ALL3D.csv"
-write.csv(merged_df, file = file_path, row.names = TRUE)
-```
-
-```{r}
-merged_df <- merged_df[, -c(2, 4)]
-
-# Assuming merged_df is your merged data frame
-library(ggplot2)
-
-# Convert merged_df to long format
-merged_long <- tidyr::pivot_longer(merged_df, cols = -age, names_to = "variable", values_to = "value")
-
-# Convert 'age' to numeric
-merged_long$age <- as.numeric(merged_long$age)
-
-png(filename = "../Output/percentageDSpredicted_allcells_3D.png", width = 800, height = 600)  # Set appropriate width and height
-
-# Create a scatterplot with a trendline
-p <- ggplot(merged_long, aes(x = age, y = value)) +
-  geom_point(size = 3, color = "blue") +  # Make points larger and blue
-  geom_smooth(method = "lm", se = FALSE, color = "black", size = 0.7) +  # Make trendline slightly thinner
-  labs(title = NULL, x = "Age", y = "Percentage DS predicted cells") +
-  theme_minimal() +
-  theme(panel.grid = element_blank())  # Remove gridlines
-
-# Extract R-squared and p-values
-fit <- lm(value ~ age, data = merged_long)
-rsq <- sprintf("R^2 = %.3f", summary(fit)$r.squared)
-pval <- sprintf("p = %.3f", summary(fit)$coefficients[2,4])
-
-# Add R-squared and p-values as text
-p + 
-  geom_text(x = max(merged_long$age), y = max(merged_long$value), label = paste(rsq, pval, sep = ", "), hjust = 1, vjust = 10)
-
-dev.off()
-
-```
-
-
-
 ### Session information
 ```{r session_info_99}
 sessionInfo()

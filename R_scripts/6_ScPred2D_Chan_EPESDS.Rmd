@@ -3,10 +3,13 @@ title: "6_ScPred2D_Chan_EPESDS"
 author: "BH"
 date: '2022-11-15'
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+  pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
 ```{r load_packages}
 library("dplyr")
 library("Seurat")
@@ -25,6 +28,8 @@ library("caret")
 library("dplyr")
 library("janitor")
 library("factoextra")
+library("monocle3")
+library("SeuratWrappers")
 
 options(future.globals.maxSize = 12000 * 1024^2)
 
@@ -33,6 +38,11 @@ options(future.globals.maxSize = 12000 * 1024^2)
 # Building 'Early Senescent' PDL50 cells into the model as an additional classifier
 
 ```{r}
+
+custom_theme <- readRDS(file = "custom_theme.rds")
+Chan_seurat2 <- readRDS(file="Chan_seurat2.rds")
+hdfseurat_filt_2D <- readRDS(file = "../Output/Seurat_Objects/hdfseuratfiltered_2Dcells.rds")
+
 #Subsetting PDL50 'early senescent' cells
 ES <- subset(Chan_seurat2, PDL == "PDL_50")
 
@@ -217,7 +227,6 @@ ggsave("../Output/Early_senescence/pseudotimetrajectory.png", plot, width = 8, h
 
 # Building an MDA model including the third 'ES' classifier
 ```{r}
-HDF_Chan_combined$new_col <- NULL
 #HDF_Chan_combined$New_Col <- NULL
 #HDF_Chan_combined$New_Col.1 <- NULL
 New_Col <- 1:3235
@@ -261,7 +270,7 @@ saveRDS(testing, file =  "../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting_E
 ```
 
 
-```{r}
+```{r, results = FALSE}
 #Using the reference data set to create and evaluate different models - no PC filters
 HDF_Chan_combined_scPred <- getFeatureSpace(training, "Sample")
 
@@ -508,6 +517,10 @@ dev.off()
 
 
 ```
+```{r}
+saveRDS(HDF_Chan_combined_scPred, file="HDF_Chan_combined_scPred.Rds")
+```
+
 ### Session information
 ```{r session_info_99}
 sessionInfo()

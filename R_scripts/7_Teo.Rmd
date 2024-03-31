@@ -3,16 +3,46 @@ title: "7_Teo"
 author: "BH"
 date: "2024-03-15"
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
 # Investigating performance of EP/ES/DS SenPred 2D classifier on publicly available paper: Teo, Y.V., Rattanavirotkul, N., Olova, N., Salzano, A., Quintanilla, A., Tarrats, N., Kiourtis, C., Müller, M., Green, A.R., Adams, P.D. and Acosta, J.C., 2019. Notch signaling mediates secondary senescence. Cell reports, 27(4), pp.997-1007.
 
 This will allow the model to be tested on an alternative trigger: Oncogene Induced Senescence (OIS/RIS), and paracrine senescence (GFP).
 
 ## Loading data
 ```{r}
+
+custom_theme <- readRDS(file = "custom_theme.rds")
+HDF_Chan_combined_scPred <- readRDS(file ="HDF_Chan_combined_scPred.rds")
+
 #install.packages("GEOquery")
 library(GEOquery)
 metadata <- read.csv("../Inputfiles/barcodes_Teo.csv")

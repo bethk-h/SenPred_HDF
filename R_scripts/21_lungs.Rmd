@@ -1,12 +1,40 @@
 ---
-title: "18_lungs"
+title: "20_lungs"
 author: "BH"
 date: "2024-02-23"
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+#library("EnsDb.Hsapiens.v86")
+
+
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
 # To test SenPred on fibroblasts from another tissue, the lung, I extracted data from the human cell atlas using the following paper:
 Sikkema, L., Ramírez-Suástegui, C., Strobl, D.C., Gillett, T.E., Zappia, L., Madissoon, E., Markov, N.S., Zaragosi, L.E., Ji, Y., Ansari, M. and Arguel, M.J., 2023. An integrated cell atlas of the lung in health and disease. Nature Medicine, 29(6), pp.1563-1577.
 
@@ -14,6 +42,10 @@ Data was downloaded from cellxgene at the following link:
 https://cellxgene.cziscience.com/collections/6f6d381a-7701-4781-935c-db10d30de293
 
 ```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
+hdf_mda2D <- readRDS(file = "hdf_mda2D.rds")
+hdf_mda3D <- readRDS(file="hdf_mda3D.rds")
+
 lung <- readRDS("../Inputfiles/lungatlas.rds")
 
 unique_studies <- unique(lung@meta.data$dataset)
@@ -80,8 +112,6 @@ add_hyphen <- function(x) {
 # Apply the function to the 'gene_name' column
 gene_name$gene_name <- add_hyphen(gene_name$gene_name)
 
-# Print the modified dataframe
-print(gene_name)
 
 gene_name$gene_ids <- Gene_ID [["Gene_ID"]]
 
@@ -94,8 +124,6 @@ library(dplyr)
 duplicate_rows <- combined_data %>%
   dplyr::filter(duplicated(gene_name) | duplicated(gene_name, fromLast = TRUE))
 
-# View the duplicate rows
-print(duplicate_rows)
 
 # Assuming combined_data is your DataFrame
 combined_data <- combined_data %>%
@@ -106,7 +134,6 @@ combined_data <- combined_data %>%
 MT_genes <- combined_data %>%
   dplyr::filter(startsWith(gene_name, "MT-"))
 
-print(MT_genes)
 
 
 # Assuming gene_name is your DataFrame containing gene symbols
@@ -355,163 +382,11 @@ lung_fibroblast4_filt@assays[["RNA"]]@counts@Dimnames[[1]] <- gene_name[["gene_n
 
 lung_fibroblast4_filt@assays[["RNA"]]@data@Dimnames[[1]] <- gene_name[["gene_name"]]
 
-```
-
-
-## Plotting top 10 variable features in the cells
-```{r}
-
 rownames(lung_fibroblast4_filt@assays$RNA@meta.features) <- gene_name[["gene_name"]]
 
-#Selecting highly variable features - high cell to cell variation
-lung_fibroblast4_filt <- FindVariableFeatures(lung_fibroblast4_filt, selection.method ="vst", nfeatures=2000)
-#Identify the 10 most highly variable genes
-top10 <- head(VariableFeatures(lung_fibroblast4_filt), 10)
-top10
-plot3 <- VariableFeaturePlot(lung_fibroblast4_filt)
-#Plot variable features with labels
-plot4 <- LabelPoints(plot=plot3, points = top10, repel=TRUE)
-plot4
-
-ggsave(
-  "variablefeatures.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/LungAtlas"
-  )
-```
-## Scaling the data before dimensionality reduction. Each gene is centred to a mean of 0, and scaled by the standard deviation of each gene.
-```{r}
-all.genes <- rownames(lung_fibroblast4_filt)
-lung_fibroblast4_filt <- ScaleData(lung_fibroblast4_filt, features = all.genes)
-
-#Performing a PCA
-lung_fibroblast4_filt <- RunPCA(lung_fibroblast4_filt, features=VariableFeatures(object = lung_fibroblast4_filt))
-
-#Plotting the PCA
-PCA_no_label <- DimPlot(lung_fibroblast4_filt, reduction = "pca", seed = 123, combine=TRUE) + NoLegend()
-PCA_age_or_mean_of_age_range_label <- DimPlot(lung_fibroblast4_filt, reduction = "pca", seed = 123, group.by = "age_or_mean_of_age_range")
-
-PCA_no_label
-PCA_age_or_mean_of_age_range_label
+saveRDS(lung_fibroblast4_filt, file = "../Output/lung_fibroblast4_filt.rds")
 ```
 
-
-## Heatmaps to investigate the genes influencing the top PCs
-```{r}
-DimHeatmap(lung_fibroblast4_filt, dims=1, cells=500, balanced=TRUE)
-DimHeatmap(lung_fibroblast4_filt, dims=1:15, cells=500, balanced=TRUE)
-ElbowPlot(lung_fibroblast4_filt) 
-
-#Suggests top 10 PCs explain most of the variance. Test this with jackstraw plot
-#hdfseurat_jackstraw <- JackStraw(lung_fibroblast4_filt, num.replicate = 100)
-#hdfseurat_jackstraw <- ScoreJackStraw(hdfseurat_jackstraw, dims = 1:20)
-#JackStrawPlot(hdfseurat_jackstraw, dims = 1:15)
-```
-
-## Clustering the cells using KNN
-```{r}
-#Use K-nearest neighbours based on PCA distance in FindNeighbours() function based on previously definited dimensions (10) from elbow plot
-lung_fibroblast4_filt <- FindNeighbors(lung_fibroblast4_filt, dims =1:10)
-
-#group cells using findclusters function
-lung_fibroblast4_filt <- FindClusters(lung_fibroblast4_filt, resolution = 0.4)
-
-#Look at cluster ID's of first 5 cells
-head(Idents(lung_fibroblast4_filt), 5)
-```
-
-## Plot UMAP
-```{r}
-#Running a UMAP
-lung_fibroblast4_filt <- RunUMAP(lung_fibroblast4_filt, dims=1:10)
-
-
-#Plotting UMAP with cluster IDs
-DimPlot(lung_fibroblast4_filt, reduction = "umap", seed = 123 ) 
-
-ggsave(
-  "UMAP_clusters.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/LungAtlas"
-  )
-
-#Colouring above UMAP plot with age_or_mean_of_age_range type
-DimPlot(lung_fibroblast4_filt, reduction = "umap",group.by = "age_or_mean_of_age_range") 
-ggsave(
-  "UMAP_age_or_mean_of_age_rangecolour.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/LungAtlas"
-  )
-```
-
-```{r}
-query <- scPredict(lung_fibroblast4_filt, hdf_mda3D)
-# Extract metadata for further analysis
-  query2 <- query@meta.data
-  table <- table(query2[, c("age_or_mean_of_age_range", "scpred_prediction")])
-  mat <- as.data.frame.matrix(table)
-  
-  # Calculate percentages and create barplot
-  percentages <- (mat / rowSums(mat)) * 100
-  percentages <- na.omit(percentages)
-  percentages <- percentages[order(row.names(percentages)), ]
-  v <- rownames(percentages)
-  
-  # Create barplot
-  barplot_data <- percentages$DS3D
-  barplot_names <- v
-  
-  barplot(barplot_data, names = barplot_names, cex.names = 0.7, col = "darkblue",
-          main = "Percentage of predicted deeply senescent cells", xlab = "Age",
-          ylab = "Percentage", ylim = c(0, 100))
-  
-
-library(ggplot2)
-library(ggpubr)  # For statistical annotations
-
-  # Extract the first column of the percentages dataframe
-percent_DS <- percentages[, 1]
-
-# Extract the row names of the percentages dataframe
-age <- rownames(percentages)
-
-result <- data.frame(age = age, percent_DS = percent_DS)
-
-result$age <- as.numeric(result$age)
-
-# Assuming data is your long-format data frame
-library(ggplot2)
-
-# Create a scatterplot 
-p <- ggplot(result, aes(x = age, y = percent_DS)) +
-  geom_point(size = 3, color = "blue") +  # Make points larger and blue
-  geom_smooth(method = "lm", se = FALSE, color = "black", size = 0.7) +  # Make trendline slightly thinner
-  labs(title = NULL, x = "Age", y = "Percentage DS predicted cells") +
-  theme_minimal() +
-  theme(panel.grid = element_blank())  # Remove gridlines
-
-
-# Extract R-squared and p-values
-cor_coef <- cor.test(merged_long$age, merged_long$value, method = "pearson")
-pearson_cor <- sprintf("Pearson correlation = %.3f", cor_coef$estimate)
-pval <- sprintf("p = %.3f", cor_coef$p.value)
-
-# Add R-squared and p-values as text
-p + 
-  geom_text(x = max(result$age), y = min(result$percent_DS), label = paste(pearson_cor, pval, sep = ", "), hjust = 1, vjust = -1) +
-  custom_theme(base_size=20)
-
-ggsave(
-  "scatterplot_3D_lungs.tiff",
-  plot = last_plot(),
-  device = "tiff",
-  path = "../Output/LungAtlas"
-  )
-
-```
 
 
 

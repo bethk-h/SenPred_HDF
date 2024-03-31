@@ -1,16 +1,20 @@
 ---
 title: "4_ScPred_2D"
 author: "BH"
-date: '2022-03-23'
+date: "24/09/2021"
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
 # Building machine learning models of proliferative and senescent HDFs in 2D, using ScPred package (see https://github.com/powellgenomicslab/scPred)
 
 ## Loading libraries
-```{r}
+```{r, results = FALSE}
 library("scPred")
 library("Seurat")
 library("magrittr")
@@ -19,10 +23,25 @@ library("dplyr")
 library("janitor")
 library("factoextra")
 library("MLmetrics")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("here")
+library("stringr")
+library("reshape2")
+library("ggplot2")
 ```
 
 ## Seperating dataset into training and testing. 80% training, and 20% testing
-```{r}
+```{r, warning=FALSE}
+hdfseurat_filt_2D <- readRDS(file = "../Output/Seurat_Objects/hdfseuratfiltered_2Dcells.rds")
+custom_theme <- readRDS(file = "custom_theme.rds")
+
 new_col <- 1:2193
 
 hdfseurat_filt_2D@meta.data <- cbind(hdfseurat_filt_2D@meta.data, new_col)
@@ -41,7 +60,7 @@ obj_list <- SplitObject(hdfseurat_filt_2D, split.by = "new_col")
 ```
 
 ## Normalising, scaling and running PCA on training and testing data
-```{r}
+```{r, warning=FALSE}
 training <- obj_list$Train %>% 
   NormalizeData() %>% 
   FindVariableFeatures() %>% 
@@ -88,7 +107,7 @@ saveRDS(testing, file =  "../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting.r
 
 ```
 
-```{r}
+```{r, warning=FALSE, results = FALSE}
 #Using the training dataset to create and evaluate different models - no PC filters
 
 hdfseurat_scPred <- getFeatureSpace(training, "Sample")
@@ -107,6 +126,8 @@ hdf_mda2D <- trainModel(hdfseurat_scPred, model = "mda")
 get_probabilities(hdf_mda2D) %>% head()
 get_scpred(hdf_mda2D)
 hdf_mda2D
+saveRDS(hdf_mda2D, file = "hdf_mda2D.rds")
+
 
 #This model is logistic regression
 hdf_glm2D <- trainModel(hdfseurat_scPred, model = "glm")
@@ -124,7 +145,7 @@ hdf_knn2D
 ## Decided to take SVM and MDA forward for further analysis due to increased sens and spec. 
 Testing on test dataset
 
-```{r}
+```{r, warning=FALSE}
 
 #SVM testing 
 query <- NormalizeData(testing)
@@ -154,7 +175,7 @@ FeaturePlot(query, c("scpred_DS2D", "scpred_EP2D"))
 ```
 
 ##Confusion matrix plot
-```{r}
+```{r, warning=FALSE}
 query_df <- query@meta.data
 query_df <- query_df %>%
   mutate(Status = case_when(query_df$Sample=="DS2D" & query_df$scpred_prediction=="DS2D" ~ "DS2DT"))
@@ -247,7 +268,7 @@ draw_confusion_matrix(your_confusion_matrix, output_file_path)
 ```
 
 #Testing MDA model
-```{r}
+```{r, warning=FALSE}
 #SVM testing 
 query <- NormalizeData(testing)
 query <- scPredict(query, hdf_mda2D, recompute_alignment = FALSE)
@@ -274,7 +295,7 @@ FeaturePlot(query, c("scpred_DS2D", "scpred_EP2D"))
 ```
 
 ##Confusion matrix plot
-```{r}
+```{r, warning=FALSE}
 query_df <- query@meta.data
 query_df <- query_df %>%
   mutate(Status = case_when(query_df$Sample=="DS2D" & query_df$scpred_prediction=="DS2D" ~ "DS2DT"))
@@ -365,7 +386,7 @@ draw_confusion_matrix(your_confusion_matrix, output_file_path)
 ```
 
 ### Session information
-```{r session_info_99}
+```{r, echo=FALSE, warning=FALSE}
 sessionInfo()
 ```
 

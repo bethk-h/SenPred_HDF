@@ -3,15 +3,44 @@ title: "9_Sole boldo"
 author: "BH"
 date: '2022-06-23'
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
 
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
 # Loading in second whole skin scRNA sequencing dataset from Sole-Boldo et al, to test the 2D SenPred model. 
 Solé-Boldo, L., Raddatz, G., Schütz, S., Mallm, J.P., Rippe, K., Lonsdorf, A.S., Rodríguez-Paredes, M. and Lyko, F., 2020. Single-cell transcriptomes of the human skin reveal age-related loss of fibroblast priming. Communications biology, 3(1), p.188.
 
 ```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
+hdf_mda2D <- readRDS(file = "hdf_mda2D.rds")
+HDF_Chan_combined_scPred <- readRDS(file ="HDF_Chan_combined_scPred.rds")
+
 Sole <- readRDS("../Inputfiles/Sole-Boldo_SeuratObject_New-AD21-Clusters.rds")
 Idents(object = Sole) <- Sole$SoleBoldo_name
 
@@ -446,6 +475,11 @@ ggsave("barplot_stacked_2Dpred_EPESDS.tiff",
 
 ```
 
+```{r}
+saveRDS(querysole, file="querysole.rds")
+saveRDS(Sole_fibs2, file="Sole_fibs2.rds")
+
+```
 
 
 ### Session information

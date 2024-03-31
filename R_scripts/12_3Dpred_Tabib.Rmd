@@ -3,13 +3,42 @@ title: "12_3Dpred_Tabib"
 author: "BH"
 date: "2023-03-09"
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
 
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
 #Testing ScPred 3D ML MDA model on Tabib datasets
 ```{r}
+custom_theme <- readRDS(file = "custom_theme.rds")
+Tabib_fibs2 <- readRDS(file="Tabib_fibs2.rds")
+hdf_mda3D <- readRDS(file="hdf_mda3D.rds")
+
 #MDA radial model
 querytabib3D <- NormalizeData(Tabib_fibs2)
 querytabib3D <- scPredict(querytabib3D, hdf_mda3D)
@@ -62,7 +91,7 @@ dev.off()
 
 
 ```{r}
-query2 <- query@meta.data
+query2 <- querytabib3D@meta.data
 table <- table(query2[, c("seurat_clusters", "scpred_prediction")])
 table
 mat <- as.data.frame.matrix(table)
@@ -88,7 +117,7 @@ dev.off()
 ## Investigating DEGs of cells my model predicts are DS3D vs cells my model predicts are EP3D
 
 ```{r}
-query3 <- SetIdent(query, value = query@meta.data$scpred_prediction)
+query3 <- SetIdent(querytabib3D, value = querytabib3D@meta.data$scpred_prediction)
 levels(query3)
 
 
@@ -99,6 +128,10 @@ DS3D.markers.all <- FindMarkers(query3, ident.1 = "DS3D", ident.2 = "EP3D", only
 write.csv(DS3D.markers.pos,"../Output/Tabib/DS3D_markers_Pos2.csv")
 write.csv(DS3D.markers.all,"../Output/Tabib/DS3D_markers_all.csv")
 
+```
+
+```{r}
+saveRDS(querytabib3D, file="querytabib3D.rds")
 ```
 
 ### Session information
