@@ -4,7 +4,7 @@ author: "Bethany Hughes"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
   rmarkdown::pdf_document:
-    toc: TRUE
+    toc: FALSE
 urlcolor: blue
 ---
 Machine learning model built from single cell RNA sequencing of replicative senescent and early proliferative human dermal fibroblasts
@@ -72,12 +72,17 @@ All scripts can be found in the [R_scripts](R_scripts) folder. The number prefix
 * [13_3Dpred_SoleBoldo.Rmd](R_scripts/13_3Dpred_SoleBoldo.Rmd) - Testing the 3D model on external whole skin in vivo single cell RNA seq dataset from Solé-Boldo et al. (Solé-Boldo, L., Raddatz, G., Schütz, S., Mallm, J.P., Rippe, K., Lonsdorf, A.S., Rodríguez-Paredes, M. and Lyko, F., 2020. Single-cell transcriptomes of the human skin reveal age-related loss of fibroblast priming. Communications biology, 3(1), p.188.)
 * [14_soleboldo_tabib_combined3D.Rmd](R_scripts/14_soleboldo_tabib_combined3D.Rmd) - Combining the 3D SenPred predictions for Tabib and Sole Boldo datasets. Generating heatmaps of common senescence marker correlations in cells predicted to be EP or DS.
 * [15_matrisome.Rmd](R_scripts/15_matrisome.Rmd) - Importing NABA_MATRISOME genes from the matrisome project https://sites.google.com/uic.edu/matrisome/home?authuser=0, to compare ECM expression in fibroblasts grown in 2D, 3D, and in vivo.
-* [16_Ganier.Rmd](R_scripts/16_Ganier.Rmd) - Testing SenPred on an additional whole skin dataset by Ganier et al, and combining these donor predictions with the Tabib and Sole Boldo datasets to investigate age related trends in senescence predictions. Paper: Ganier, C., Mazin, P., Herrera-Oropeza, G., Du-Harpur, X., Blakeley, M., Gabriel, J., Predeus, A.V., Cakir, B., Prete, M., Harun, N. and Darrigrand, J.F., 2024. Multiscale spatial mapping of cell populations across anatomical sites in healthy human skin and basal cell carcinoma. Proceedings of the National Academy of Sciences, 121(2), p.e2313326120.
-* [17_alldermal_celltypes.Rmd](R_scripts/17_alldermal_celltypes.Rmd) - Testing 3D SenPred on all skin cells from Tabib, Sole Boldo, and Ganier datasets.
-* [18_lungs.Rmd](R_scripts/18_lungs.Rmd) - Testing 3D SenPred on fibroblasts from lung tissue. The data was obtained from the human cell atlas using the following paper: Sikkema, L., Ramírez-Suástegui, C., Strobl, D.C., Gillett, T.E., Zappia, L., Madissoon, E., Markov, N.S., Zaragosi, L.E., Ji, Y., Ansari, M. and Arguel, M.J., 2023. An integrated cell atlas of the lung in health and disease. Nature Medicine, 29(6), pp.1563-1577.
+* [16_Ganier.Rmd](R_scripts/16_Ganier.Rmd) - Preprocessing, for testing SenPred on an additional whole skin dataset by Ganier et al, and combining these donor predictions with the Tabib and Sole Boldo datasets to investigate age related trends in senescence predictions. Paper: Ganier, C., Mazin, P., Herrera-Oropeza, G., Du-Harpur, X., Blakeley, M., Gabriel, J., Predeus, A.V., Cakir, B., Prete, M., Harun, N. and Darrigrand, J.F., 2024. Multiscale spatial mapping of cell populations across anatomical sites in healthy human skin and basal cell carcinoma. Proceedings of the National Academy of Sciences, 121(2), p.e2313326120.
+* [17_Ganier2.Rmd](R_scripts/17_Ganier2.Rmd) - Identifying and filtering fibroblasts for testing SenPred on an additional whole skin dataset by Ganier et al, and combining these donor predictions with the Tabib and Sole Boldo datasets to investigate age related trends in senescence predictions. Paper: Ganier, C., Mazin, P., Herrera-Oropeza, G., Du-Harpur, X., Blakeley, M., Gabriel, J., Predeus, A.V., Cakir, B., Prete, M., Harun, N. and Darrigrand, J.F., 2024. Multiscale spatial mapping of cell populations across anatomical sites in healthy human skin and basal cell carcinoma. Proceedings of the National Academy of Sciences, 121(2), p.e2313326120.
+* [18_Ganier3.Rmd](R_scripts/18_Ganier3.Rmd) - Testing SenPred on an additional whole skin dataset by Ganier et al, and combining these donor predictions with the Tabib and Sole Boldo datasets to investigate age related trends in senescence predictions. Paper: Ganier, C., Mazin, P., Herrera-Oropeza, G., Du-Harpur, X., Blakeley, M., Gabriel, J., Predeus, A.V., Cakir, B., Prete, M., Harun, N. and Darrigrand, J.F., 2024. Multiscale spatial mapping of cell populations across anatomical sites in healthy human skin and basal cell carcinoma. Proceedings of the National Academy of Sciences, 121(2), p.e2313326120.
+* [19_alldermal_celltypes.Rmd](R_scripts/19_alldermal_celltypes.Rmd) - Testing 3D SenPred on all skin cells from Tabib and Sole Boldo datasets.
+* [20_allskin_ganier.Rmd](R_scripts/20_allskin_ganier.Rmd) - Testing 3D SenPred on all skin cells from Ganier dataset, and combining with Tabib and Sole Boldo dataset to investigate age related trends in senescence predictions.
+* [21_lungs.Rmd](R_scripts/21_lungs.Rmd) - Processing data to test 3D SenPred on fibroblasts from lung tissue. The data was obtained from the human cell atlas using the following paper: Sikkema, L., Ramírez-Suástegui, C., Strobl, D.C., Gillett, T.E., Zappia, L., Madissoon, E., Markov, N.S., Zaragosi, L.E., Ji, Y., Ansari, M. and Arguel, M.J., 2023. An integrated cell atlas of the lung in health and disease. Nature Medicine, 29(6), pp.1563-1577.
 Data was downloaded from cellxgene at the following link:
 https://cellxgene.cziscience.com/collections/6f6d381a-7701-4781-935c-db10d30de293
-
+* [22_lungs.Rmd](R_scripts/22_lungs.Rmd) - Testing 3D SenPred on fibroblasts from lung tissue. The data was obtained from the human cell atlas using the following paper: Sikkema, L., Ramírez-Suástegui, C., Strobl, D.C., Gillett, T.E., Zappia, L., Madissoon, E., Markov, N.S., Zaragosi, L.E., Ji, Y., Ansari, M. and Arguel, M.J., 2023. An integrated cell atlas of the lung in health and disease. Nature Medicine, 29(6), pp.1563-1577.
+Data was downloaded from cellxgene at the following link:
+https://cellxgene.cziscience.com/collections/6f6d381a-7701-4781-935c-db10d30de293
 
 ### Output
 The resulting output files are saved to the [Output](Output) folder in this repository. This will not be tracked in GitHub. 

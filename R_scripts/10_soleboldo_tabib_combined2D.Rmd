@@ -3,12 +3,43 @@ title: "10_Soleboldo_tabib_combined2"
 author: "BH"
 date: "2024-03-09"
 output:
-  prettydoc::html_pretty:
-    theme: cayman
+ pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r load_packages}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("readxl")
+library("tidyseurat")
+library("ggplot2")
+library("tidyverse")
+library("RCurl")
+library("cowplot")
+library("sctransform")
+library("scPred")
+library("Seurat")
+library("magrittr")
+library("caret")
+library("dplyr")
+library("janitor")
+library("factoextra")
+library("reshape2")
+
+options(future.globals.maxSize = 12000 * 1024^2)
+
+```
 #Integrate Tabib and Sole-Boldo seurat objects which contain 2D EP/ES/DS senpred predictions 
 ```{r}
+
+custom_theme <- readRDS(file = "custom_theme.rds")
+querytabib <- readRDS(file = "querytabib.rds")
+querysole <- readRDS(file = "querysole.rds")
+
 list <- list(querytabib, querysole)
 
 applySCTransformToList <- function(seuratList) {
