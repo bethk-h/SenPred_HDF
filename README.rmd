@@ -6,6 +6,7 @@ output:
   rmarkdown::pdf_document:
     toc: FALSE
 urlcolor: blue
+preserve_yaml: false
 ---
 Machine learning model built from single cell RNA sequencing of replicative senescent and early proliferative human dermal fibroblasts
 ```{r, include = FALSE}
