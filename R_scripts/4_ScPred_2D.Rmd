@@ -102,8 +102,8 @@ saveRDS(testing, file =  "../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting.r
 
 ## Note - every time you run the script you will get slightly different results. This is because the training and testing splits are random. If you want to exactly replicate your results, save the training and testing files and load them in each time.
 
-#training <- readRDS("../Output/Seurat_Objects/hdfseuratfiltered_2Dtraining.rds")
-#testing <- readRDS("../Output/Seurat_Objects/hdfseuratfiltered_2Dtesting.rds")
+training <- readRDS("../InputFiles/Seurat_Objects/hdfseuratfiltered_2Dtraining.rds")
+testing <- readRDS("../InputFiles/Seurat_Objects/hdfseuratfiltered_2Dtesting.rds")
 
 ```
 

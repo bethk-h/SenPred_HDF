@@ -332,8 +332,8 @@ ggplot(counts_df, aes(x = CDKN1A, y = CDKN2A)) +
   geom_point() +
   labs(x = "CDKN1A counts", y = "CDKN2A counts", title = "Scatterplot of CDKN1A vs CDKN2A counts_DS") +
   annotate("text", x = min(counts_df$CDKN1A), y = max(counts_df$CDKN2A), 
-           label = paste("Pearson Correlation:", round(correlation, 2)), 
-           hjust = -1, vjust = 1, color = "black", size = 6) +
+           label = paste("Pearson Correlation:", round(correlation, 4)), 
+           hjust = -1.5, vjust = 1, color = "black", size = 4) +
   custom_theme(base_size=20)
 
 ggsave(
@@ -371,8 +371,8 @@ ggplot(counts_df, aes(x = CDKN1A, y = CDKN2A)) +
   geom_point() +
   labs(x = "CDKN1A counts", y = "CDKN2A counts", title = "Scatterplot of CDKN1A vs CDKN2A counts_EP") +
   annotate("text", x = min(counts_df$CDKN1A), y = max(counts_df$CDKN2A), 
-           label = paste("Pearson Correlation:", round(correlation, 2)), 
-           hjust = -1, vjust = 1, color = "black", size = 6) +
+           label = paste("Pearson Correlation:", round(correlation, 4)), 
+           hjust = -1.5, vjust = 1, color = "black", size = 4) +
   custom_theme(base_size=20)
 
 ggsave(
@@ -411,8 +411,8 @@ ggplot(counts_df, aes(x = IL6, y = IL8)) +
   geom_point() +
   labs(x = "IL6 counts", y = "IL8 counts", title = "Scatterplot of IL6 vs IL8 counts_DS") +
   annotate("text", x = min(counts_df$IL6), y = max(counts_df$IL8), 
-           label = paste("Pearson Correlation:", round(correlation, 2)), 
-           hjust = -1, vjust = 1, color = "black", size = 6) +
+           label = paste("Pearson Correlation:", round(correlation, 4)), 
+           hjust = -1.5, vjust = 1, color = "black", size = 4) +
   custom_theme(base_size=20)
 
 ggsave(
@@ -446,8 +446,8 @@ ggplot(counts_df, aes(x = IL6, y = IL8)) +
   geom_point() +
   labs(x = "IL6 counts", y = "IL8 counts", title = "Scatterplot of IL6 vs IL8 counts_EP") +
   annotate("text", x = min(counts_df$IL6), y = max(counts_df$IL8), 
-           label = paste("Pearson Correlation:", round(correlation, 2)), 
-           hjust = -1, vjust = 1, color = "black", size = 6) +
+           label = paste("Pearson Correlation:", round(correlation, 4)), 
+           hjust = -1.5, vjust = 1, color = "black", size = 4) +
   custom_theme(base_size=20)
 
 ggsave(
@@ -483,8 +483,8 @@ ggplot(counts_df, aes(x = IGFBP3, y = TP53)) +
   geom_point() +
   labs(x = "IGFBP3 counts", y = "TP53 counts", title = "Scatterplot of IGFBP3 vs TP53 counts_DS") +
   annotate("text", x = min(counts_df$IGFBP3), y = max(counts_df$TP53), 
-           label = paste("Pearson Correlation:", round(correlation, 2)), 
-           hjust = -1, vjust = 1, color = "black", size = 6) +
+           label = paste("Pearson Correlation:", round(correlation, 4)), 
+           hjust = -1.5, vjust = 1, color = "black", size = 4) +
   custom_theme(base_size=20)
 
 ggsave(
@@ -518,8 +518,8 @@ ggplot(counts_df, aes(x = IGFBP3, y = TP53)) +
   geom_point() +
   labs(x = "IGFBP3 counts", y = "TP53 counts", title = "Scatterplot of IGFBP3 vs TP53 counts_EP") +
   annotate("text", x = min(counts_df$IGFBP3), y = max(counts_df$TP53), 
-           label = paste("Pearson Correlation:", round(correlation, 2)), 
-           hjust = -1, vjust = 1, color = "black", size = 6) +
+           label = paste("Pearson Correlation:", round(correlation, 4)), 
+           hjust = -1.5, vjust = 1, color = "black", size = 4) +
   custom_theme(base_size=20)
 
 ggsave(

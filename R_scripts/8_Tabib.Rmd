@@ -432,7 +432,7 @@ ggsave(
 ## Investigating the percentage of EP/ES/DS predicted cells per age
 
 ```{r}
-query2 <- query@meta.data
+query2 <- querytabib@meta.data
 table <- table(query2[, c("age", "scpred_prediction")])
 table
 mat <- as.data.frame.matrix(table)

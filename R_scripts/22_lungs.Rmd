@@ -193,10 +193,11 @@ annotate("text", x = Inf, y = Inf,
          hjust = 1, vjust = 1, 
          size = 4, color = "black", 
          xjust = 1, yjust = 1)  # Move annotation to top right
+p
 
 dev.off()
 
-p
+
 
 ```
 

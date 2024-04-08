@@ -214,6 +214,11 @@ dev.off()
 
 heatmap.2(numeric_matrix, col=my_palette, breaks = breaks, key=TRUE, trace="none", main="Matrisome", key.title = "Gene count", cexRow=0.1, cexCol=0.5, distfun = function(x) dist(x, method = "euclidean"), hclust = function(x) hclust(x, method = "ward.D2"), symkey = FALSE, density.info = "none", cex.axis = 5) 
 ```
+```{r}
+merged_df_nozero <- rownames(merged_df_nozero)
+merged_df_nozero <- as.data.frame(merged_df_nozero)
+write.csv(merged_df_nozero, file = "../Output/Matrisome/merged_df_nozero.csv", row.names = TRUE)
+```
 
 ### Session information
 ```{r session_info_99}

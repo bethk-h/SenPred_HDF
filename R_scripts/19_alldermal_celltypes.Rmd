@@ -374,7 +374,7 @@ perc <- melt(df)
 v <- perc$age
 
 percentages_Tabib3D_ALL <- perc
-write.csv(percentages_Tabib3D_ALL, "../Output/TabibALL/EPDS3D_tabibALL.csv")
+write.csv(percentages_Tabib3D_ALL, "../Output/Tabib/EPDS3D_tabibALL.csv")
 #convert 'variable' to factor and specify level order
 perc$variable <- factor(perc$variable, levels=c('unassigned', 'EP2D', 'PDL50', 'DS2D'))
 
@@ -753,6 +753,8 @@ ggsave("barplot_stacked_3Dpred_age.tiff",
   )
 
 ```
+
+
 ### Session information
 ```{r session_info_99}
 sessionInfo()
