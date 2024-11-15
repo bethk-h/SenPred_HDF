@@ -329,15 +329,17 @@ ggsave(
 ```
 
 ```{r}
-plot2 <- DimPlot(Teo_seurat2, reduction = "umap",group.by = "Condition2.x", seed = 123)+
-  custom_theme(base_size=20)
+plot2 <- DimPlot(Teo_seurat2, reduction = "umap", group.by = "Condition2.x", seed = 123) +
+  scale_color_manual(values = c("#9b5fe0", "#16a5d8", "#f9a52c")) +  # Setting custom colors
+  custom_theme(base_size = 20)
 plot2
 ggsave(
   "UMAP_clusters_samples.tiff",
   plot = last_plot(),
   device = "tiff",
   path = "../Output/Teo"
-  )
+)
+
 ```
 
 #Running SenPred 2D EP/ES/DS on Teo data
@@ -346,51 +348,57 @@ query <- NormalizeData(Teo_seurat2)
 query <- scPredict(query, HDF_Chan_combined_scPred)
 
 
-DimPlot(query, group.by = "Condition2.x", label = FALSE, repel = TRUE, label.size=2)
-pred_plot <- DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed = 123) +
-  custom_theme(base_size=20)
+library(RColorBrewer)
 
-pred_plot
+# Define the custom color palette
+custom_palette <- c("deeppink3", "#00CA00", "antiquewhite4") 
 
+plot1 <- DimPlot(query, group.by = "Condition2.x", label = FALSE, repel = TRUE, label.size = 2) +
+  scale_color_manual(values = custom_palette)  # Set custom colors
+
+plot2 <- DimPlot(query, group.by = "scpred_prediction", label = FALSE, repel = TRUE, seed = 123) +
+  scale_color_manual(values = custom_palette) +  # Set custom colors
+  custom_theme(base_size = 20)
+
+plot2
 
 ggsave(
   "UMAP_clusters_scpred2d_EPESDS.tiff",
-  plot = last_plot(),
+  plot = plot2,  # Save the second plot
   device = "tiff",
   path = "../Output/Teo"
-  )
+)
 
 ```
 ##Extracting percentage predictions for Teo data
 ```{r}
+library(tibble)
+library(reshape2)
+library(ggplot2)
+
 query2 <- query@meta.data
 table <- table(query2[, c("Condition2.x", "scpred_prediction")])
-table
 mat <- as.data.frame.matrix(table)
-print(mat)
 
-## Coverting numbers per condition into percentages
+## Converting numbers per condition into percentages
 percentages <- (mat/rowSums(mat))*100
-percentages
 percentages <- na.omit(percentages)
-percentages
-as.matrix(percentages)
-percentages <- percentages[ order(row.names(percentages)), ]
+percentages <- percentages[order(row.names(percentages)), ]
 v <- rownames(percentages)
-
-print(percentages)
 
 df <- tibble::rownames_to_column(percentages, "Condition")
 percentage2 <- melt(df)
 
-##Reordering variables
+## Reordering variables
 percentage2$variable <- factor(percentage2$variable, levels = c("unassigned", "EP2D", "PDL50"))
 
+# Reorder levels of "Condition" variable
+percentage2$Condition <- factor(percentage2$Condition, levels = c("Growing", "RIS", "GFP"))
 
-percplot <- ggplot(percentage2, aes(x=Condition, y=value, fill=variable)) + 
-    geom_bar(position='stack', stat='identity') +
-  scale_fill_manual(values=c("antiquewhite4", "deeppink3", "#228c22")) +
-  custom_theme(base_size=20)
+percplot <- ggplot(percentage2, aes(x = Condition, y = value, fill = variable)) + 
+  geom_bar(position = 'stack', stat = 'identity') +
+  scale_fill_manual(values = c("antiquewhite4", "deeppink3", "#228c22")) +
+  custom_theme(base_size = 20)
 
 percplot
 
@@ -399,7 +407,7 @@ ggsave(
   plot = last_plot(),
   device = "tiff",
   path = "../Output/Teo"
-  )
+)
 
 ```
 ### Session information

@@ -466,6 +466,128 @@ saveRDS(hdfseurat_filt_3D, file="hdfseurat_filt_3D.rds")
 
 ```
 
+# Generating a correlation matrix of a panel of selected senescence genes - EP cells
+```{r}
+# Subset the Seurat object based on scpred_prediction
+filtered_seurat_EP <- subset(hdfseurat_filt_3D, subset = Sample == "EP3D")
+
+# Extract gene counts for filtered cells
+gene_counts <- filtered_seurat_EP@assays$RNA@data
+
+# Define gene list 
+gene_list <- c("CDKN1A", "CDKN2A", "IGFBP3", "SERPINE1", "IGF1", "CXCL12", "IL6", "MMP3", "TP53")
+
+# Check if gene names in gene_list are present in row names (genes)
+missing_genes <- gene_list[!gene_list %in% rownames(gene_counts)]
+if (length(missing_genes) > 0) {
+  stop(paste("Genes missing in gene counts:", paste(missing_genes, collapse = ", ")))
+}
+
+# Filter gene counts based on the gene list
+gene_counts <- gene_counts[gene_list, ]
+gene_counts <- as.matrix(gene_counts)
+# Transpose gene counts matrix
+gene_counts_transposed <- t(gene_counts)
+gene_counts_transposed <- as.matrix(gene_counts_transposed)
+
+# Calculate correlation matrix
+correlation_matrix <- cor(gene_counts_transposed)
+
+# Print correlation matrix
+print(correlation_matrix)
+
+dendrogram_row <- as.dendrogram(hclust(dist(correlation_matrix), method = "ward.D2"))
+dendrogram_col <- as.dendrogram(hclust(dist(t(correlation_matrix)), method = "ward.D2"))
+
+# Define breaks and color palette
+breaks <- unique(c(seq(-1,-0.0001,length=50),seq(-0.00001,0.01,length=50), seq(0.011,1,length=50)))
+my_palette <- colorRampPalette(c("blue","white", "white", "red"))(length(breaks)-1)
+
+library("gplots")
+png(filename = "../Output/HDF_Data_Analysis/Markercorrelation_EP3D.png", width = 800, height = 600)  # Set appropriate width and height
+
+heatmap <- heatmap.2(correlation_matrix, 
+                     col = my_palette, 
+                     breaks = breaks, 
+                     key = TRUE, 
+                     trace = "none", 
+                     main = "Marker Correlation_EP_3D", 
+                     key.title = "Correlation",   
+                     cexRow = 0.6, 
+                     cexCol = 0.6,    
+                     distfun = function(x) dist(x, method = "euclidean"),
+                     hclust = function(x) hclust(x, method = "ward.D2"), 
+                     symkey = FALSE, 
+                     Rowv = dendrogram_row,
+                     Colv = dendrogram_col,
+                     dendrogram = "both",
+                     density.info = c("none")) +
+  custom_theme(base_size=20)
+
+dev.off()
+
+print(heatmap)
+```
+# Generating a correlation matrix of a panel of selected senescence genes - DS cells
+```{r}
+# Subset the Seurat object based on scpred_prediction
+filtered_seurat_EP <- subset(hdfseurat_filt_3D, subset = Sample == "DS3D")
+
+# Extract gene counts for filtered cells
+gene_counts <- filtered_seurat_EP@assays$RNA@data
+
+# Define gene list 
+gene_list <- c("CDKN1A", "CDKN2A", "IGFBP3", "SERPINE1", "IGF1", "CXCL12", "IL6", "MMP3", "TP53")
+
+# Check if gene names in gene_list are present in row names (genes)
+missing_genes <- gene_list[!gene_list %in% rownames(gene_counts)]
+if (length(missing_genes) > 0) {
+  stop(paste("Genes missing in gene counts:", paste(missing_genes, collapse = ", ")))
+}
+
+# Filter gene counts based on the gene list
+gene_counts <- gene_counts[gene_list, ]
+gene_counts <- as.matrix(gene_counts)
+# Transpose gene counts matrix
+gene_counts_transposed <- t(gene_counts)
+gene_counts_transposed <- as.matrix(gene_counts_transposed)
+
+# Calculate correlation matrix
+correlation_matrix <- cor(gene_counts_transposed)
+
+# Print correlation matrix
+print(correlation_matrix)
+
+# Define breaks and color palette
+breaks <- unique(c(seq(-1,-0.0001,length=50),seq(-0.00001,0.01,length=50), seq(0.011,1,length=50)))
+my_palette <- colorRampPalette(c("blue","white", "white", "red"))(length(breaks)-1)
+
+library("gplots")
+png(filename = "../Output/HDF_Data_Analysis/Markercorrelation_DS3D.png", width = 800, height = 600)  # Set appropriate width and height
+
+heatmap <- heatmap.2(correlation_matrix, 
+                     col = my_palette, 
+                     breaks = breaks, 
+                     key = TRUE, 
+                     trace = "none", 
+                     main = "Marker Correlation_DS_3D", 
+                     key.title = "Correlation",   
+                     cexRow = 0.6, 
+                     cexCol = 0.6,    
+                     distfun = function(x) dist(x, method = "euclidean"),
+                     hclust = function(x) hclust(x, method = "ward.D2"), 
+                     symkey = FALSE, 
+                     Rowv = dendrogram_row,
+                     Colv = dendrogram_col,
+                     dendrogram = "both",
+                     density.info = c("none")) +
+  custom_theme(base_size=20)
+
+dev.off()
+
+print(heatmap)
+```
+
 ### Session information
 ```{r session_info_99}
 sessionInfo()
