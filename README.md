@@ -1,8 +1,6 @@
 # Machine learning model built from single cell RNA sequencing of replicative senescent and early proliferative human dermal fibroblasts
 
-Rversion<- 4.2.2
-Seuratversion<- 4.3.0.1
-scPredversion<- 1.9.2
+Rversion<- 4.2.2, Seuratversion<- 4.3.0.1, scPredversion<- 1.9.2
 
 ### Funding sources
 - BBSRC iCASE Unilever PhD studentship (BB/V509668/1)
